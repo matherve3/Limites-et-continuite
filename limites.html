@@ -1,0 +1,3461 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Limites & Continuité — Terminale D</title>
+
+<script>
+MathJax = {
+    tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']],
+        processEscapes: true
+    },
+    svg: { fontCache: 'global' },
+    startup: { typeset: false }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,700;0,900;1,500&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+
+<style>
+:root {
+    --bg-deep: #2b2620;
+    --paper: #f5f0e6;
+    --paper-2: #fdfaf3;
+    --paper-3: #efe7d6;
+    --ink: #1c1c1c;
+    --ink-2: #4a4a4a;
+    --ink-3: #8a8a8a;
+    --navy: #1e3a5f;
+    --navy-light: #e4ebf3;
+    --terracotta: #c65d3b;
+    --terracotta-light: #f7e3d9;
+    --gold: #c99a2e;
+    --gold-light: #f7edd2;
+    --forest: #2d5f3f;
+    --forest-light: #ddeae0;
+    --wine: #7d2e2e;
+    --wine-light: #f0dcdc;
+    --plum: #6a3d5a;
+    --plum-light: #ebdfe5;
+    --border: #e6dcc9;
+    --border-2: #d0c0a0;
+    --border-3: #b8a582;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+
+body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg-deep);
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 16px 12px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    font-size: 17px;
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+        radial-gradient(circle at 15% 25%, rgba(198,93,59,0.12) 0%, transparent 40%),
+        radial-gradient(circle at 85% 75%, rgba(30,58,95,0.15) 0%, transparent 45%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* === LOADER === */
+.loader {
+    position: fixed; inset: 0;
+    background: var(--bg-deep);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 9999; transition: opacity 0.4s ease; color: var(--paper);
+}
+.loader.hidden { opacity: 0; pointer-events: none; }
+.loader .loader-title {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 1.9rem;
+    color: var(--gold);
+    margin-bottom: 8px;
+    letter-spacing: 0.02em;
+}
+.loader .loader-sub {
+    font-size: 0.78rem;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--border-3);
+    font-weight: 500;
+}
+.loader .loader-rule {
+    margin-top: 26px;
+    width: 80px;
+    height: 1px;
+    background: var(--border-3);
+    position: relative;
+    overflow: hidden;
+}
+.loader .loader-rule::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--terracotta);
+    animation: loadSlide 1.4s ease-in-out infinite;
+    transform-origin: left;
+}
+@keyframes loadSlide {
+    0%   { transform: scaleX(0); transform-origin: left; }
+    50%  { transform: scaleX(1); transform-origin: left; }
+    51%  { transform: scaleX(1); transform-origin: right; }
+    100% { transform: scaleX(0); transform-origin: right; }
+}
+
+/* === WRAPPER === */
+.book-wrapper {
+    position: relative; width: 100%; max-width: 850px; z-index: 1;
+    display: flex; flex-direction: column; align-items: center;
+}
+
+.book {
+    position: relative; width: 100%; height: 20.5cm;
+    max-height: calc(100vh - 130px);
+    touch-action: pan-y;
+    user-select: none;
+    -webkit-user-select: none;
+    overflow: hidden;
+    border-radius: 4px;
+    box-shadow: 0 30px 60px -15px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,0,0,0.15);
+}
+
+/* === PAGE === */
+.page {
+    position: absolute;
+    inset: 0;
+    background: var(--paper);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    z-index: 1;
+    will-change: transform, opacity;
+}
+
+.page.active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    z-index: 5;
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(60px); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes slideOutLeft {
+    from { transform: translateX(0);      opacity: 1; }
+    to   { transform: translateX(-60px);  opacity: 0; }
+}
+@keyframes slideInLeft {
+    from { transform: translateX(-60px); opacity: 0; }
+    to   { transform: translateX(0);     opacity: 1; }
+}
+@keyframes slideOutRight {
+    from { transform: translateX(0);     opacity: 1; }
+    to   { transform: translateX(60px);  opacity: 0; }
+}
+
+.page.anim-in-right  { animation: slideInRight  0.4s cubic-bezier(0.16, 1, 0.3, 1) both; z-index: 6; }
+.page.anim-out-left  { animation: slideOutLeft  0.4s cubic-bezier(0.16, 1, 0.3, 1) both; z-index: 4; }
+.page.anim-in-left   { animation: slideInLeft   0.4s cubic-bezier(0.16, 1, 0.3, 1) both; z-index: 6; }
+.page.anim-out-right { animation: slideOutRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; z-index: 4; }
+
+/* === BARRE DE CHAPITRE === */
+.chapter-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 38px;
+    background: var(--paper-2);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+.chapter-bar .chapter-label {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+.chapter-bar .chapter-num {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px; height: 34px;
+    padding: 0 8px;
+    background: var(--navy);
+    color: var(--paper);
+    border-radius: 50px;
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+.chapter-bar .chapter-title {
+    font-family: 'Playfair Display', serif;
+    font-weight: 500;
+    font-style: italic;
+    color: var(--navy);
+    font-size: 1.15rem;
+    letter-spacing: 0.01em;
+}
+.chapter-bar .chapter-page {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--ink-3);
+    letter-spacing: 0.08em;
+}
+
+/* === CONTENU === */
+.page-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 42px 48px 56px 48px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-2) transparent;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+    touch-action: pan-y;
+    max-width: 100%;
+}
+.page-content::-webkit-scrollbar { width: 8px; }
+.page-content::-webkit-scrollbar-track { background: transparent; }
+.page-content::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 4px; }
+.page-content::-webkit-scrollbar-thumb:hover { background: var(--border-3); }
+
+.scroll-indicator {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 34px;
+    height: 2px;
+    background: var(--border-2);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+    z-index: 4;
+}
+.page.active.has-scroll:not(.scrolled-bottom) .scroll-indicator {
+    opacity: 1;
+    animation: scrollHintPulse 2s ease-in-out infinite;
+}
+@keyframes scrollHintPulse {
+    0%, 100% { transform: translateX(-50%) translateY(0); opacity: 0.35; }
+    50%      { transform: translateX(-50%) translateY(4px); opacity: 0.9; }
+}
+
+/* === MATHJAX === */
+.formula, .formula mjx-container, .formula mjx-container svg, mjx-container, mjx-container svg {
+    max-width: 100% !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+}
+mjx-container[jax="SVG"][display="false"] { display: inline !important; white-space: normal !important; }
+mjx-container[display="true"] {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    display: block !important;
+}
+
+table { width: 100% !important; table-layout: fixed !important; }
+th, td { word-break: break-word !important; overflow-wrap: anywhere !important; }
+table mjx-container { font-size: 88% !important; max-width: 100% !important; }
+
+.section p, .section li,
+.definition p, .theorem p, .property p, .example p,
+.warning p, .method p, .method li,
+.exercise .ex-body, .exercise .ex-body p,
+.correction, .correction .step,
+.appli-q, .bac-question, .bac-context {
+    word-wrap: break-word !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+    max-width: 100% !important;
+}
+.correction .step { display: block !important; }
+
+/* === TYPOGRAPHIE (AGRANDIE) === */
+.section h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.3rem;
+    font-weight: 700;
+    color: var(--navy);
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+    margin-bottom: 4px;
+}
+.section h2 .h2-num {
+    color: var(--terracotta);
+    font-style: italic;
+    font-weight: 500;
+    margin-right: 6px;
+}
+.section h2 + .h2-rule {
+    width: 54px;
+    height: 3px;
+    background: var(--terracotta);
+    margin-bottom: 26px;
+    border-radius: 2px;
+}
+.section h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.32rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-top: 28px;
+    margin-bottom: 12px;
+    letter-spacing: -0.005em;
+}
+.section p {
+    color: var(--ink-2);
+    margin: 12px 0;
+    font-size: 1.05rem;
+    line-height: 1.75;
+}
+.section strong { color: var(--ink); font-weight: 600; }
+
+.section .lead::first-letter {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.8rem;
+    font-weight: 700;
+    float: left;
+    line-height: 0.9;
+    margin: 4px 10px 0 0;
+    color: var(--terracotta);
+}
+
+/* === CARTES === */
+.definition, .theorem, .property, .example, .warning, .method, .remarque {
+    background: var(--paper-2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 20px 24px 18px 28px;
+    margin: 18px 0;
+    position: relative;
+}
+.definition::before, .theorem::before, .property::before,
+.example::before, .warning::before, .method::before, .remarque::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+    border-radius: 3px 0 0 3px;
+}
+.definition::before { background: var(--navy); }
+.theorem::before    { background: var(--gold); }
+.property::before   { background: var(--forest); }
+.example::before    { background: var(--plum); }
+.warning::before    { background: var(--wine); }
+.method::before     { background: var(--terracotta); }
+.remarque::before   { background: var(--border-3); }
+
+.definition .tag, .theorem .tag, .property .tag,
+.example .tag, .warning .tag, .method .tag, .remarque .tag {
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    margin-bottom: 12px;
+    display: block;
+}
+.definition .tag { color: var(--navy); }
+.theorem .tag { color: var(--gold); }
+.property .tag { color: var(--forest); }
+.example .tag { color: var(--plum); }
+.warning .tag { color: var(--wine); }
+.method .tag { color: var(--terracotta); }
+.remarque .tag { color: var(--ink-2); }
+
+/* === FORMULES === */
+.formula {
+    background: var(--paper-2);
+    border: 1px solid var(--border);
+    border-top: 3px double var(--border-2);
+    border-bottom: 3px double var(--border-2);
+    padding: 20px 24px;
+    margin: 18px 0;
+    text-align: center;
+    font-size: 1.1rem;
+    color: var(--ink);
+}
+.formula mjx-container[display="true"] { font-size: 100% !important; }
+.formula .label {
+    display: block;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--ink-3);
+    margin-bottom: 12px;
+}
+.formula.gold { border-top-color: var(--gold); border-bottom-color: var(--gold); }
+.formula.purple { border-top-color: var(--plum); border-bottom-color: var(--plum); }
+.formula.cyan { border-top-color: var(--terracotta); border-bottom-color: var(--terracotta); }
+
+/* === SECRET DU PROF === */
+.secret {
+    background: var(--paper-2);
+    border: 1px solid var(--border-2);
+    border-left: 4px solid var(--gold);
+    border-radius: 3px;
+    padding: 20px 24px;
+    margin: 22px 0;
+    position: relative;
+}
+.secret::before {
+    content: '§';
+    position: absolute;
+    top: 14px; right: 22px;
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 2.4rem;
+    color: var(--gold);
+    opacity: 0.35;
+    line-height: 1;
+}
+.secret .tag {
+    display: block;
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 1.1rem;
+    color: var(--gold);
+    margin-bottom: 10px;
+    letter-spacing: 0.01em;
+}
+.secret .tag::before {
+    content: 'Le secret du prof — ';
+    color: var(--ink-3);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-style: normal;
+    font-weight: 600;
+    display: block;
+    margin-bottom: 6px;
+}
+.secret p { color: var(--ink-2); font-size: 1.02rem; line-height: 1.7; }
+.secret strong { color: var(--navy); }
+
+/* === ERREURS À ÉVITER === */
+.erreurs {
+    background: #fdf6f0;
+    border: 1px solid var(--wine-light);
+    border-left: 4px solid var(--wine);
+    border-radius: 3px;
+    padding: 20px 24px 16px;
+    margin: 22px 0;
+}
+.erreurs .tag {
+    display: block;
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 1.1rem;
+    color: var(--wine);
+    margin-bottom: 12px;
+}
+.erreurs .tag::before {
+    content: 'Erreurs à éviter — ';
+    color: var(--ink-3);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-style: normal;
+    font-weight: 600;
+    display: block;
+    margin-bottom: 6px;
+}
+.erreurs ul { padding-left: 0; list-style: none; margin: 6px 0; }
+.erreurs li {
+    color: var(--ink-2);
+    font-size: 1rem;
+    line-height: 1.7;
+    margin-bottom: 10px;
+    padding-left: 26px;
+    position: relative;
+}
+.erreurs li::before {
+    content: '×';
+    position: absolute;
+    left: 0;
+    top: -2px;
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    color: var(--wine);
+    font-weight: 700;
+}
+.erreurs strong { color: var(--wine); }
+
+/* === BADGE === */
+.badge-niveau {
+    display: inline-block;
+    padding: 6px 16px;
+    background: var(--paper-3);
+    color: var(--navy);
+    border-radius: 3px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    border: 1px solid var(--border-2);
+}
+
+/* === APPLICATION === */
+.appli {
+    background: var(--paper-2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 20px 24px;
+    margin: 18px 0;
+    scroll-margin-bottom: 90px;
+    border-left: 4px solid var(--forest);
+}
+.appli-title {
+    display: block;
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 1.08rem;
+    color: var(--forest);
+    margin-bottom: 12px;
+}
+.appli-q { color: var(--ink); font-size: 1.02rem; line-height: 1.65; margin-bottom: 16px; }
+.appli-choices { display: flex; flex-wrap: wrap; gap: 10px; }
+.appli-btn {
+    padding: 11px 22px;
+    background: var(--paper);
+    border: 1px solid var(--border-2);
+    border-radius: 3px;
+    font-family: inherit;
+    font-size: 1rem;
+    color: var(--ink);
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 70px;
+    text-align: center;
+    font-weight: 500;
+}
+.appli-btn:hover:not(:disabled) {
+    background: var(--forest-light);
+    border-color: var(--forest);
+}
+.appli-btn:disabled { cursor: default; }
+.appli-btn.correct {
+    background: var(--forest);
+    border-color: var(--forest);
+    color: var(--paper);
+    font-weight: 600;
+}
+.appli-btn.wrong {
+    background: var(--wine);
+    border-color: var(--wine);
+    color: var(--paper);
+}
+.appli-btn.correct::after { content: ' ✓'; }
+.appli-btn.wrong::after { content: ' ✕'; }
+.appli-feedback {
+    margin-top: 14px;
+    font-size: 0.98rem;
+    color: var(--forest);
+    display: none;
+    line-height: 1.6;
+    font-style: italic;
+    font-family: 'Playfair Display', serif;
+}
+.appli-feedback.show { display: block; }
+.appli-feedback.bad { color: var(--wine); }
+
+/* === QCM === */
+.qcm {
+    background: var(--paper-2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 22px 26px;
+    margin: 20px 0;
+    scroll-margin-bottom: 90px;
+    border-top: 3px solid var(--gold);
+    position: relative;
+}
+.qcm::before {
+    content: '?';
+    position: absolute;
+    top: 14px; right: 24px;
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 2.6rem;
+    color: var(--gold);
+    opacity: 0.25;
+    line-height: 1;
+}
+.qcm-q {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.18rem;
+    font-weight: 500;
+    color: var(--navy);
+    margin-bottom: 16px;
+    line-height: 1.5;
+}
+.qcm-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 14px 18px;
+    margin: 10px 0;
+    font-family: inherit;
+    font-size: 1.02rem;
+    color: var(--ink);
+    cursor: pointer;
+    transition: all 0.2s;
+    line-height: 1.5;
+}
+.qcm-btn:hover:not(:disabled) {
+    background: var(--gold-light);
+    border-color: var(--gold);
+}
+.qcm-btn:disabled { cursor: default; }
+.qcm-btn.correct {
+    background: var(--forest-light);
+    border-color: var(--forest);
+    color: var(--forest);
+    font-weight: 600;
+}
+.qcm-btn.correct::before { content: '✓ '; font-weight: 700; }
+.qcm-btn.wrong {
+    background: var(--wine-light);
+    border-color: var(--wine);
+    color: var(--wine);
+}
+.qcm-btn.wrong::before { content: '✕ '; font-weight: 700; }
+.qcm-feedback {
+    margin-top: 16px;
+    padding: 14px 18px;
+    border-radius: 3px;
+    font-size: 0.98rem;
+    line-height: 1.6;
+    display: none;
+    font-style: italic;
+    font-family: 'Playfair Display', serif;
+}
+.qcm-feedback.good {
+    display: block;
+    background: var(--forest-light);
+    color: var(--forest);
+    border-left: 3px solid var(--forest);
+}
+.qcm-feedback.bad {
+    display: block;
+    background: var(--wine-light);
+    color: var(--wine);
+    border-left: 3px solid var(--wine);
+}
+
+/* === VRAI/FAUX === */
+.vf {
+    background: var(--paper-2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 20px 24px;
+    margin: 16px 0;
+    border-left: 4px solid var(--terracotta);
+    scroll-margin-bottom: 90px;
+}
+.vf-q {
+    color: var(--ink);
+    margin-bottom: 16px;
+    font-size: 1.02rem;
+    line-height: 1.65;
+}
+.vf-btns { display: flex; gap: 12px; }
+.vf-btn {
+    flex: 1;
+    padding: 12px 16px;
+    background: var(--paper);
+    border: 1px solid var(--border-2);
+    border-radius: 3px;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--ink);
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.04em;
+}
+.vf-btn:hover:not(:disabled) {
+    background: var(--terracotta-light);
+    border-color: var(--terracotta);
+}
+.vf-btn:disabled { cursor: default; }
+.vf-btn.correct {
+    background: var(--forest);
+    border-color: var(--forest);
+    color: var(--paper);
+}
+.vf-btn.wrong {
+    background: var(--wine);
+    border-color: var(--wine);
+    color: var(--paper);
+}
+.vf-feedback {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-radius: 3px;
+    font-size: 0.96rem;
+    line-height: 1.55;
+    display: none;
+    font-style: italic;
+    font-family: 'Playfair Display', serif;
+}
+.vf-feedback.good { display: block; background: var(--forest-light); color: var(--forest); }
+.vf-feedback.bad { display: block; background: var(--wine-light); color: var(--wine); }
+
+/* === FLASHCARDS === */
+.flashcards-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 24px 0;
+}
+.flashcard {
+    perspective: 1200px;
+    height: 148px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+.flashcard-inner {
+    position: relative;
+    width: 100%; height: 100%;
+    transition: transform 0.7s cubic-bezier(0.4,0,0.2,1);
+    transform-style: preserve-3d;
+}
+.flashcard.flipped .flashcard-inner { transform: rotateY(180deg); }
+.flashcard-front, .flashcard-back {
+    position: absolute; inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+    padding: 18px 20px;
+    text-align: center;
+    font-size: 1rem;
+    line-height: 1.5;
+    overflow: hidden;
+}
+.flashcard-front {
+    background: var(--paper-2);
+    border: 1px solid var(--border-2);
+    color: var(--navy);
+    font-family: 'Playfair Display', serif;
+    font-weight: 500;
+}
+.flashcard-back {
+    background: var(--navy);
+    border: 1px solid var(--navy);
+    color: var(--paper);
+    transform: rotateY(180deg);
+    font-size: 0.98rem;
+    font-weight: 500;
+}
+.flashcard-back mjx-container, .flashcard-front mjx-container { font-size: 98% !important; }
+.flashcard-hint {
+    position: absolute;
+    bottom: 8px; right: 14px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.62rem;
+    letter-spacing: 0.16em;
+    color: var(--ink-3);
+    text-transform: uppercase;
+    font-weight: 600;
+}
+.flashcard.flipped .flashcard-front .flashcard-hint { display: none; }
+.flashcard-inline { margin: 20px 0; }
+
+/* === GRAPHES === */
+.graph-box {
+    background: var(--paper-2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 20px;
+    margin: 18px 0;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.graph-box svg {
+    display: block;
+    max-width: 100%;
+    max-height: 200px;
+    width: auto; height: auto;
+}
+.graph-caption {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 0.95rem;
+    color: var(--ink-3);
+    text-align: center;
+    margin-top: 14px;
+}
+.graphs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 18px 0; }
+
+/* === TABLES === */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 18px 0;
+    font-size: 0.98rem;
+    border-radius: 3px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+}
+th, td {
+    padding: 13px 12px;
+    text-align: center;
+    border: 1px solid var(--border);
+}
+th {
+    background: var(--paper-3);
+    color: var(--navy);
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: 0.98rem;
+    letter-spacing: 0.01em;
+}
+tr:nth-child(even) td { background: var(--paper-2); }
+
+ul, ol { padding-left: 26px; margin: 12px 0; }
+li { margin-bottom: 8px; color: var(--ink-2); font-size: 1.02rem; line-height: 1.7; }
+
+/* === COUVERTURE / FIN — CORRIGÉ === */
+.page[data-page-type="cover"], .page[data-page-type="back"] {
+    position: absolute;
+    inset: 0;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    background: var(--paper);
+    overflow: hidden;
+}
+.page[data-page-type="cover"]::before,
+.page[data-page-type="back"]::before {
+    content: '';
+    position: absolute;
+    top: 24px; left: 24px; right: 24px; bottom: 24px;
+    border: 1px solid var(--border-2);
+    pointer-events: none;
+}
+.page[data-page-type="cover"]::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 8px; height: 100%;
+    background: linear-gradient(180deg, var(--terracotta), var(--gold), var(--navy));
+}
+.page[data-page-type="back"]::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 8px; height: 100%;
+    background: linear-gradient(180deg, var(--navy), var(--gold), var(--terracotta));
+}
+.cover-content {
+    max-width: 560px;
+    text-align: center;
+    position: relative;
+    z-index: 2;
+    padding: 30px;
+}
+.cover-eyebrow {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.78rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 24px;
+    font-weight: 600;
+}
+.cover-emblem {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 3.6rem;
+    color: var(--terracotta);
+    line-height: 1;
+    margin-bottom: 28px;
+}
+.cover-content h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.4rem, 6.5vw, 3.8rem);
+    font-weight: 700;
+    color: var(--navy);
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    margin-bottom: 18px;
+}
+.cover-content h1 em {
+    font-style: italic;
+    font-weight: 500;
+    color: var(--terracotta);
+}
+.cover-content .rule {
+    width: 70px;
+    height: 3px;
+    background: var(--gold);
+    margin: 28px auto;
+}
+.cover-content .subtitle {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 1.3rem;
+    color: var(--ink-2);
+    margin-bottom: 8px;
+}
+.cover-content .level {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.78rem;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-top: 22px;
+    font-weight: 600;
+}
+.cover-content .badge-cover {
+    display: inline-block;
+    margin-top: 30px;
+    padding: 12px 26px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: var(--navy);
+    border: 1px solid var(--navy);
+    text-transform: uppercase;
+    border-radius: 3px;
+}
+.cover-hint {
+    margin-top: 44px;
+    color: var(--ink-3);
+    font-size: 0.8rem;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    font-weight: 600;
+    animation: hintPulse 2.4s ease-in-out infinite;
+}
+@keyframes hintPulse {
+    0%, 100% { opacity: 0.5; }
+    50%      { opacity: 1; }
+}
+
+.back-content {
+    max-width: 520px;
+    text-align: center;
+    position: relative;
+    z-index: 2;
+    padding: 30px;
+}
+.back-content .fin {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 3.6rem;
+    color: var(--terracotta);
+    margin-bottom: 20px;
+    line-height: 1;
+}
+.back-content .divider {
+    width: 60px;
+    height: 2px;
+    background: var(--gold);
+    margin: 28px auto;
+}
+.back-content p { color: var(--ink-2); font-size: 1.08rem; margin: 12px 0; }
+.back-content p strong {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.28rem;
+    color: var(--navy);
+}
+
+/* === SOMMAIRE === */
+.toc-page h2 { text-align: center; margin-bottom: 8px; }
+.toc-page h2 + .h2-rule { margin: 0 auto 14px; }
+.toc-sub {
+    text-align: center;
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    color: var(--ink-3);
+    margin-bottom: 30px;
+    font-size: 1.05rem;
+}
+.toc-list { list-style: none; padding: 0; }
+.toc-list li {
+    display: flex;
+    align-items: baseline;
+    padding: 12px 4px;
+    font-size: 1.02rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-bottom: 1px dotted var(--border-2);
+}
+.toc-list li:not(.sep):hover {
+    background: var(--paper-2);
+    padding-left: 14px;
+}
+.toc-list .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    color: var(--terracotta);
+    min-width: 50px;
+    font-size: 0.9rem;
+}
+.toc-list .title { color: var(--ink); font-weight: 500; flex: 1; }
+.toc-list .dots {
+    flex: 0 0 auto;
+    margin: 0 12px;
+    border-bottom: 1px dotted var(--border-2);
+    align-self: center;
+    min-width: 20px;
+    height: 1px;
+    transform: translateY(-3px);
+}
+.toc-list .pg {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--ink-3);
+    font-size: 0.88rem;
+    font-weight: 500;
+}
+.toc-list .sep {
+    padding: 22px 4px 10px;
+    margin-top: 10px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.76rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--navy);
+    font-weight: 700;
+    cursor: default;
+    border-bottom: 1px solid var(--navy);
+}
+
+/* === TITRES SECTION === */
+.quiz-title {
+    display: inline-block;
+    padding: 7px 18px;
+    background: var(--navy);
+    color: var(--paper);
+    border-radius: 3px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.74rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    font-weight: 700;
+}
+
+/* === EXERCICES === */
+.exercise {
+    background: var(--paper-2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 24px 26px;
+    margin: 20px 0;
+    border-left: 4px solid var(--terracotta);
+    position: relative;
+}
+.exercise .ex-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 12px;
+    letter-spacing: -0.005em;
+}
+.exercise .ex-body {
+    font-size: 1.02rem;
+    color: var(--ink-2);
+    line-height: 1.7;
+}
+.exercise .ex-body p { margin: 10px 0; color: var(--ink-2); }
+
+.corr-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+    padding: 12px 20px;
+    background: var(--terracotta);
+    color: var(--paper);
+    border: none;
+    border-radius: 3px;
+    font-family: inherit;
+    font-size: 0.86rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.corr-toggle:hover {
+    background: var(--wine);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(198,93,59,0.3);
+}
+.correction {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.45s ease, margin-top 0.3s ease, padding 0.3s ease;
+    margin-top: 0;
+    padding: 0 22px;
+    background: var(--paper);
+    border-left: 3px solid var(--forest);
+    border-radius: 3px;
+    font-size: 1rem;
+    line-height: 1.7;
+    color: var(--ink-2);
+    scroll-margin-bottom: 90px;
+}
+.correction.open {
+    max-height: 6000px;
+    margin-top: 18px;
+    padding: 20px 24px;
+}
+.correction .step { margin: 12px 0; }
+.correction .step-label {
+    display: inline-block;
+    min-width: 92px;
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    color: var(--forest);
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    margin-right: 8px;
+}
+
+/* === NIVEAUX === */
+.level-badge {
+    display: inline-block;
+    padding: 5px 14px;
+    border-radius: 3px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    border: 1px solid;
+}
+.level-1 { color: var(--forest); border-color: var(--forest); background: var(--forest-light); }
+.level-2 { color: var(--navy); border-color: var(--navy); background: var(--navy-light); }
+.level-3 { color: var(--gold); border-color: var(--gold); background: var(--gold-light); }
+.level-4 { color: var(--wine); border-color: var(--wine); background: var(--wine-light); }
+.level-5 { color: var(--plum); border-color: var(--plum); background: var(--plum-light); }
+.exercise.ex-level-1 { border-left-color: var(--forest); }
+.exercise.ex-level-2 { border-left-color: var(--navy); }
+.exercise.ex-level-3 { border-left-color: var(--gold); }
+.exercise.ex-level-4 { border-left-color: var(--wine); }
+.exercise.ex-level-5 { border-left-color: var(--plum); }
+
+/* === EXAMEN === */
+.bac-exercise {
+    background: var(--paper-2);
+    border: 1px solid var(--border-2);
+    border-radius: 3px;
+    padding: 26px 28px;
+    margin: 22px 0;
+    position: relative;
+    border-top: 4px solid var(--plum);
+}
+.bac-exercise .bac-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+}
+.bac-exercise .bac-header .bac-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.24rem;
+    font-weight: 700;
+    color: var(--plum);
+    letter-spacing: -0.005em;
+}
+.bac-exercise .bac-context {
+    font-size: 1rem;
+    color: var(--ink-2);
+    line-height: 1.7;
+    margin-bottom: 16px;
+    padding: 16px 18px;
+    background: var(--paper);
+    border-radius: 3px;
+    border-left: 3px solid var(--plum);
+    font-style: italic;
+    font-family: 'Playfair Display', serif;
+}
+.bac-exercise .bac-question {
+    font-size: 1.02rem;
+    color: var(--ink-2);
+    line-height: 1.7;
+    margin: 12px 0;
+    padding-left: 38px;
+    position: relative;
+}
+.bac-exercise .bac-question::before {
+    content: attr(data-num);
+    position: absolute;
+    left: 0; top: 0;
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    color: var(--plum);
+    font-size: 1.1rem;
+}
+
+/* === BILAN === */
+.score-banner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 26px;
+    padding: 22px 26px;
+    background: var(--paper-2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    font-size: 0.98rem;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+    border-top: 3px double var(--border-2);
+    border-bottom: 3px double var(--border-2);
+}
+.score-banner .score-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--ink-2);
+    font-weight: 500;
+}
+.score-banner .score-val {
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    color: var(--navy);
+    font-size: 1.5rem;
+    font-style: italic;
+}
+.score-banner .score-val.good { color: var(--forest); }
+.score-banner .score-val.bad { color: var(--wine); }
+
+/* === NUMÉRO PAGE === */
+.page-number {
+    position: absolute;
+    bottom: 16px;
+    left: 0; right: 0;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--ink-3);
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    pointer-events: none;
+    z-index: 3;
+}
+
+/* === NAVIGATION === */
+.book-nav {
+    margin-top: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    z-index: 10;
+    flex-wrap: wrap;
+}
+.nav-btn {
+    background: transparent;
+    color: var(--paper);
+    border: 1px solid var(--border-3);
+    padding: 11px 24px;
+    border-radius: 3px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    -webkit-tap-highlight-color: transparent;
+}
+.nav-btn:hover:not(:disabled) {
+    background: var(--paper);
+    color: var(--bg-deep);
+    border-color: var(--paper);
+}
+.nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.nav-btn .arrow { font-size: 1rem; line-height: 1; }
+
+.page-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: 1px solid var(--border-3);
+    border-radius: 3px;
+    padding: 6px 10px 6px 16px;
+}
+.page-selector .label-nav {
+    color: var(--border-3);
+    font-size: 0.76rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+.page-input {
+    width: 52px;
+    padding: 7px 8px;
+    background: rgba(0,0,0,0.2);
+    color: var(--paper);
+    border: 1px solid var(--border-3);
+    border-radius: 3px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.96rem;
+    font-weight: 600;
+    text-align: center;
+    outline: none;
+    -moz-appearance: textfield;
+    appearance: textfield;
+    transition: all 0.2s;
+}
+.page-input::-webkit-outer-spin-button,
+.page-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.page-input:focus { border-color: var(--terracotta); }
+.page-total {
+    color: var(--border-3);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.86rem;
+    font-weight: 500;
+    padding: 0 4px;
+}
+.go-btn {
+    background: var(--terracotta);
+    color: var(--paper);
+    border: none;
+    border-radius: 3px;
+    padding: 9px 18px;
+    font-family: inherit;
+    font-size: 0.84rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.go-btn:hover { background: var(--gold); }
+
+/* === PROGRESS BAR === */
+.progress-bar {
+    position: absolute;
+    top: 0; left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--terracotta), var(--gold));
+    width: 0;
+    transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 20;
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 750px) {
+    body { padding: 8px 6px 14px; }
+    .chapter-bar { padding: 14px 22px; }
+    .chapter-bar .chapter-title { font-size: 1rem; }
+    .chapter-bar .chapter-num { min-width: 30px; height: 30px; font-size: 0.85rem; }
+    .chapter-bar .chapter-page { font-size: 0.76rem; }
+    .page-content { padding: 26px 26px 50px 26px; }
+    .section h2 { font-size: 1.75rem; }
+    .section h3 { font-size: 1.18rem; margin-top: 22px; }
+    .section p { font-size: 0.98rem; }
+    .definition, .theorem, .property, .example, .warning, .method, .remarque { padding: 16px 20px; margin: 16px 0; }
+    .secret, .erreurs { padding: 18px 20px; }
+    .secret .tag, .erreurs .tag { font-size: 1rem; }
+    .secret p, .erreurs li { font-size: 0.95rem; }
+    .formula { padding: 16px 18px; font-size: 1rem; }
+    .appli { padding: 16px 20px; }
+    .appli-q { font-size: 0.96rem; }
+    .appli-btn { font-size: 0.92rem; padding: 9px 16px; }
+    .qcm { padding: 18px 20px; }
+    .qcm::before { font-size: 2rem; }
+    .qcm-q { font-size: 1.06rem; }
+    .qcm-btn { font-size: 0.96rem; padding: 12px 16px; }
+    .vf { padding: 16px 20px; }
+    .vf-q { font-size: 0.96rem; }
+    .vf-btn { font-size: 0.92rem; padding: 10px 14px; }
+    .flashcards-grid { gap: 12px; }
+    .flashcard { height: 132px; }
+    .flashcard-front, .flashcard-back { font-size: 0.92rem; padding: 16px; }
+    .exercise { padding: 18px 20px; }
+    .exercise .ex-title { font-size: 1.08rem; }
+    .exercise .ex-body { font-size: 0.96rem; }
+    .corr-toggle { font-size: 0.8rem; padding: 10px 16px; }
+    .correction { font-size: 0.92rem; }
+    .correction.open { padding: 16px 18px; }
+    .correction .step-label { font-size: 0.68rem; min-width: 78px; }
+    .score-banner { font-size: 0.9rem; padding: 18px; gap: 16px; }
+    .score-banner .score-val { font-size: 1.25rem; }
+    .bac-exercise { padding: 20px 22px; }
+    .bac-exercise .bac-context { font-size: 0.92rem; padding: 14px 16px; }
+    .bac-exercise .bac-question { font-size: 0.96rem; padding-left: 32px; }
+    .bac-exercise .bac-header .bac-title { font-size: 1.1rem; }
+    .cover-content h1 { font-size: 2.4rem; }
+    .cover-content .subtitle { font-size: 1.1rem; }
+    .nav-btn { padding: 9px 16px; font-size: 0.8rem; }
+    .page-number { font-size: 0.72rem; bottom: 12px; }
+    .toc-list li { font-size: 0.96rem; padding: 10px 4px; }
+    .toc-list .num { font-size: 0.82rem; min-width: 44px; }
+    .book-nav { gap: 8px; margin-top: 12px; }
+    .page-selector { padding: 5px 8px 5px 14px; gap: 6px; }
+    .page-selector .label-nav { font-size: 0.7rem; }
+    .page-input { width: 46px; font-size: 0.88rem; padding: 5px 6px; }
+    .go-btn { padding: 7px 14px; font-size: 0.78rem; }
+    table { font-size: 0.86rem !important; }
+    th, td { padding: 10px 6px !important; }
+    table mjx-container { font-size: 82% !important; }
+    mjx-container[display="true"] { font-size: 92% !important; }
+}
+
+@media (max-width: 480px) {
+    .nav-btn .label { display: none; }
+    .nav-btn { padding: 9px 14px; }
+    .page-selector .label-nav { display: none; }
+    .page-input { width: 44px; }
+    .flashcards-grid { grid-template-columns: 1fr; }
+    .flashcard { height: 110px; }
+    .graphs-grid { grid-template-columns: 1fr; }
+    .page-content { padding: 22px 20px 46px 20px; }
+    .section h2 { font-size: 1.55rem; }
+    .chapter-bar { padding: 12px 18px; }
+    .chapter-bar .chapter-title { font-size: 0.92rem; }
+    .chapter-bar .chapter-page { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .page.anim-in-right, .page.anim-out-left,
+    .page.anim-in-left, .page.anim-out-right {
+        animation-duration: 0.15s !important;
+    }
+    .scroll-indicator { animation: none !important; }
+    .flashcard-inner { transition-duration: 0.2s !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="loader" id="loader">
+    <div class="loader-title">Limites &amp; Continuité</div>
+    <div class="loader-sub">Terminale D</div>
+    <div class="loader-rule"></div>
+</div>
+
+<div class="book-wrapper">
+    <div class="book" id="book">
+        <div class="progress-bar" id="progressBar"></div>
+
+        <!-- PAGE 0 : COUVERTURE -->
+        <div class="page active" data-page-type="cover">
+            <div class="cover-content">
+                <div class="cover-eyebrow">— Analyse · Terminale D —</div>
+                <div class="cover-emblem">∫</div>
+                <h1>Limites<br>&amp; <em>Continuité</em></h1>
+                <div class="rule"></div>
+                <p class="subtitle">Le comportement des fonctions</p>
+                <p class="level">Cours interactif</p>
+                <div class="badge-cover">12 Chapitres · Exercices Corrigés</div>
+                <div class="cover-hint">Glissez pour ouvrir →</div>
+            </div>
+        </div>
+
+        <!-- PAGE 1 : SOMMAIRE -->
+        <div class="page" data-page-type="content">
+            <div class="chapter-bar">
+                <div class="chapter-label">
+                    <span class="chapter-num">§</span>
+                    <span class="chapter-title">Sommaire</span>
+                </div>
+                <span class="chapter-page">— 01</span>
+            </div>
+            <div class="page-content toc-page">
+                <h2>Table des matières</h2>
+                <div class="h2-rule"></div>
+                <p class="toc-sub">Un parcours en trois parties</p>
+                <ul class="toc-list">
+                    <li class="sep">Partie I — Limites</li>
+                    <li data-goto="2"><span class="num">1.1</span><span class="title">Notion de limite</span><span class="dots"></span><span class="pg">02</span></li>
+                    <li data-goto="3"><span class="num">1.2</span><span class="title">Limites de référence</span><span class="dots"></span><span class="pg">03</span></li>
+                    <li data-goto="4"><span class="num">1.3</span><span class="title">Opérations sur les limites</span><span class="dots"></span><span class="pg">04</span></li>
+                    <li data-goto="5"><span class="num">1.4</span><span class="title">Formes indéterminées</span><span class="dots"></span><span class="pg">05</span></li>
+                    <li data-goto="6"><span class="num">1.5</span><span class="title">Asymptotes</span><span class="dots"></span><span class="pg">06</span></li>
+                    <li data-goto="7"><span class="num">1.6</span><span class="title">Fonctions composées</span><span class="dots"></span><span class="pg">07</span></li>
+                    <li class="sep">Partie II — Continuité</li>
+                    <li data-goto="8"><span class="num">2.1</span><span class="title">Continuité en un point</span><span class="dots"></span><span class="pg">08</span></li>
+                    <li data-goto="9"><span class="num">2.2</span><span class="title">Continuité sur un intervalle</span><span class="dots"></span><span class="pg">09</span></li>
+                    <li data-goto="10"><span class="num">2.3</span><span class="title">Théorème des valeurs intermédiaires</span><span class="dots"></span><span class="pg">10</span></li>
+                    <li data-goto="11"><span class="num">2.4</span><span class="title">Corollaire &amp; bijection</span><span class="dots"></span><span class="pg">11</span></li>
+                    <li class="sep">Partie III — Méthodes</li>
+                    <li data-goto="12"><span class="num">3.1</span><span class="title">Calculer une limite</span><span class="dots"></span><span class="pg">12</span></li>
+                    <li data-goto="13"><span class="num">3.2</span><span class="title">Étudier la continuité</span><span class="dots"></span><span class="pg">13</span></li>
+                    <li data-goto="14"><span class="num">3.3</span><span class="title">Résoudre f(x) = k</span><span class="dots"></span><span class="pg">14</span></li>
+                    <li class="sep">Entraînement</li>
+                    <li data-goto="15"><span class="num">Q</span><span class="title">Quiz récapitulatif</span><span class="dots"></span><span class="pg">15</span></li>
+                    <li data-goto="16"><span class="num">F</span><span class="title">Flashcards</span><span class="dots"></span><span class="pg">16</span></li>
+                    <li data-goto="17"><span class="num">N1</span><span class="title">Exercices standards</span><span class="dots"></span><span class="pg">17</span></li>
+                    <li data-goto="18"><span class="num">N2</span><span class="title">Exercices intermédiaires</span><span class="dots"></span><span class="pg">18</span></li>
+                    <li data-goto="19"><span class="num">N3</span><span class="title">Exercices avancés</span><span class="dots"></span><span class="pg">19</span></li>
+                    <li data-goto="20"><span class="num">N4</span><span class="title">Exercices experts</span><span class="dots"></span><span class="pg">20</span></li>
+                    <li data-goto="21"><span class="num">EX</span><span class="title">Sujets type examen</span><span class="dots"></span><span class="pg">21</span></li>
+                    <li data-goto="22"><span class="num">★</span><span class="title">Bilan</span><span class="dots"></span><span class="pg">22</span></li>
+                    <li data-goto="23"><span class="num">✦</span><span class="title">Fin de la formation</span><span class="dots"></span><span class="pg">23</span></li>
+                </ul>
+            </div>
+            <div class="scroll-indicator"></div>
+            <div class="page-number">· 01 ·</div>
+        </div>
+
+        <!-- PAGE 2 -->
+        <div class="page" data-page-type="content">
+            <div class="chapter-bar">
+                <div class="chapter-label">
+                    <span class="chapter-num">1.1</span>
+                    <span class="chapter-title">Notion de limite</span>
+                </div>
+                <span class="chapter-page">— 02</span>
+            </div>
+            <div class="page-content">
+                <div class="section">
+                    <h2><span class="h2-num">§1.1</span> Notion de limite</h2>
+                    <div class="h2-rule"></div>
+
+                    <div class="remarque">
+                        <span class="tag">En clair</span>
+                        <p class="lead">Une limite, c'est le comportement d'une fonction <strong>quand on s'approche d'un point</strong> ou <strong>quand on va très loin</strong>. On ne demande pas la valeur exacte <em>au</em> point, mais la <strong>tendance</strong>.</p>
+                    </div>
+
+                    <div class="definition">
+                        <span class="tag">Définition — Limite finie en un point</span>
+                        <p>Soit $f$ définie sur un intervalle ouvert contenant $a$ (sauf peut-être en $a$). On dit que $f$ admet pour limite $\ell$ en $a$, et on écrit :</p>
+                        <p>$$\lim_{x \to a} f(x) = \ell$$</p>
+                        <p>$f(x)$ devient aussi proche que l'on veut de $\ell$ dès que $x$ est suffisamment proche de $a$.</p>
+                    </div>
+
+                    <div class="definition">
+                        <span class="tag">Définition — Limite infinie</span>
+                        <p>$$\lim_{x \to a} f(x) = +\infty$$</p>
+                        <p>signifie que $f(x)$ devient aussi grand que l'on veut dès que $x$ est suffisamment proche de $a$.</p>
+                    </div>
+
+                    <div class="appli" data-correct="1">
+                        <span class="appli-title">Application</span>
+                        <p class="appli-q">Que vaut $\displaystyle\lim_{x \to 2} (x^2 + 3x - 1)$ ?</p>
+                        <div class="appli-choices">
+                            <button class="appli-btn" data-idx="0">$4$</button>
+                            <button class="appli-btn" data-idx="1">$9$</button>
+                            <button class="appli-btn" data-idx="2">$0$</button>
+                        </div>
+                        <div class="appli-feedback"></div>
+                    </div>
+
+                    <div class="vf" data-correct="vrai">
+                        <p class="vf-q">Vrai ou Faux : $\displaystyle\lim_{x \to +\infty} \frac{1}{x} = 0$.</p>
+                        <div class="vf-btns">
+                            <button class="vf-btn" data-choice="vrai">Vrai</button>
+                            <button class="vf-btn" data-choice="faux">Faux</button>
+                        </div>
+                        <div class="vf-feedback"></div>
+                    </div>
+
+                    <div class="secret">
+                        <span class="tag">Pour calculer une limite en un point $a$</span>
+                        <p><strong>Commence toujours par remplacer $x$ par $a$.</strong> Si tu obtiens un nombre, c'est fini ! Si tu obtiens une forme indéterminée, tu dois transformer l'expression.</p>
+                    </div>
+
+                    <div class="erreurs">
+                        <span class="tag"></span>
+                        <ul>
+                            <li><strong>Confondre</strong> $f(a)$ (valeur en $a$) et $\lim_{x \to a} f(x)$ (tendance).</li>
+                            <li><strong>Oublier</strong> que $f$ peut ne pas être définie en $a$ et pourtant admettre une limite en $a$.</li>
+                            <li><strong>Écrire</strong> $\lim_{x \to a} f(x)$ sans vérifier que la limite existe.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="scroll-indicator"></div>
+            <div class="page-number">· 02 ·</div>
+        </div>
+
+        <!-- PAGE 3 -->
+        <div class="page" data-page-type="content">
+            <div class="chapter-bar">
+                <div class="chapter-label">
+                    <span class="chapter-num">1.2</span>
+                    <span class="chapter-title">Limites de référence</span>
+                </div>
+                <span class="chapter-page">— 03</span>
+            </div>
+            <div class="page-content">
+                <div class="section">
+                    <h2><span class="h2-num">§1.2</span> Limites de référence</h2>
+                    <div class="h2-rule"></div>
+
+                    <div class="remarque">
+                        <span class="tag">À connaître par cœur</span>
+                        <p class="lead">Ces limites sont tes <strong>outils de base</strong>. Elles te serviront à calculer toutes les autres limites.</p>
+                    </div>
+
+                    <div class="formula">
+                        <span class="label">Puissances &amp; inverses</span>
+                        <p>$\displaystyle\lim_{x \to +\infty} x^n = +\infty$ &nbsp;·&nbsp; $\displaystyle\lim_{x \to +\infty} \frac{1}{x^n} = 0$ &nbsp;·&nbsp; $\displaystyle\lim_{x \to 0^+} \frac{1}{x} = +\infty$</p>
+                    </div>
+
+                    <div class="formula">
+                        <span class="label">Radical, exponentielle, logarithme</span>
+                        <p>$\displaystyle\lim_{x \to +\infty} \sqrt{x} = +\infty$</p>
+                        <p>$\displaystyle\lim_{x \to -\infty} e^x = 0 \quad · \quad \lim_{x \to +\infty} e^x = +\infty$</p>
+                        <p>$\displaystyle\lim_{x \to 0^+} \ln x = -\infty \quad · \quad \lim_{x \to +\infty} \ln x = +\infty$</p>
+                    </div>
+
+                    <div class="property">
+                        <span class="tag">Limites trigonométriques</span>
+                        <p>$$\lim_{x \to 0} \frac{\sin x}{x} = 1 \qquad \lim_{x \to 0} \frac{\tan x}{x} = 1 \qquad \lim_{x \to 0} \frac{1 - \cos x}{x^2} = \frac{1}{2}$$</p>
+                    </div>
+
+                    <div class="property">
+                        <span class="tag">Croissances comparées (en +∞)</span>
+                        <p>Pour tous $a > 0$ et $b > 0$ :</p>
+                        <p>$$\lim_{x \to +\infty} \frac{e^x}{x^a} = +\infty \qquad \lim_{x \to +\infty} \frac{\ln x}{x^a} = 0 \qquad \lim_{x \to 0^+} x^a \ln x = 0$$</p>
+                    </div>
+
+                    <div class="appli" data-correct="0">
+                        <span class="appli-title">Application</span>
+                        <p class="appli-q">Que vaut $\displaystyle\lim_{x \to +\infty} \frac{e^x}{x^2}$ ?</p>
+                        <div class="appli-choices">
+                            <button class="appli-btn" data-idx="0">$+\infty$</button>
+                            <button class="appli-btn" data-idx="1">$0$</button>
+                            <button class="appli-btn" data-idx="2">$1$</button>
+                        </div>
+                        <div class="appli-feedback"></div>
+                    </div>
+
+                    <div class="secret">
+                        <span class="tag">Retiens l'ordre de priorité en +∞</span>
+                        <p><strong>Exponentielle &gt; Puissance &gt; Logarithme.</strong> Autrement dit, $e^x$ gagne toujours contre $x^n$, et $x^n$ gagne toujours contre $\ln x$.</p>
+                    </div>
+
+                    <div class="erreurs">
+                        <span class="tag"></span>
+                        <ul>
+                            <li><strong>Écrire</strong> $\lim_{x \to 0} \frac{\sin x}{x} = 0$ : c'est faux, ça vaut <strong>1</strong>.</li>
+                            <li><strong>Confondre</strong> $\lim_{x \to -\infty} e^x = 0$ (vrai) avec $\lim_{x \to +\infty} e^x = 0$ (faux).</li>
+                            <li><strong>Oublier</strong> que $\ln x$ n'existe pas en $-\infty$.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="scroll-indicator"></div>
+            <div class="page-number">· 03 ·</div>
+        </div>
+
+        <!-- PAGE 4 -->
+        <div class="page" data-page-type="content">
+            <div class="chapter-bar">
+                <div class="chapter-label">
+                    <span class="chapter-num">1.3</span>
+                    <span class="chapter-title">Opérations sur les limites</span>
+                </div>
+                <span class="chapter-page">— 04</span>
+            </div>
+            <div class="page-content">
+                <div class="section">
+                    <h2><span class="h2-num">§1.3</span> Opérations sur les limites</h2>
+                    <div class="h2-rule"></div>
+
+                    <div class="property">
+                        <span class="tag">Règles générales</span>
+                        <p>Si $\displaystyle\lim_{x \to a} f(x) = \ell$ et $\displaystyle\lim_{x \to a} g(x) = \ell'$ (avec $\ell, \ell'$ finis), alors :</p>
+                        <p>• $\displaystyle\lim_{x \to a} (f + g) = \ell + \ell'$</p>
+                        <p>• $\displaystyle\lim_{x \to a} (f \times g) = \ell \times \ell'$</p>
+                        <p>• $\displaystyle\lim_{x \to a} \dfrac{f}{g} = \dfrac{\ell}{\ell'}$ si $\ell' \neq 0$</p>
+                        <p>• $\displaystyle\lim_{x \to a} (k \cdot f) = k \cdot \ell$ pour tout réel $k$</p>
+                    </div>
+
+                    <div class="theorem">
+                        <span class="tag">Théorème des gendarmes</span>
+                        <p>Si pour tout $x$ proche de $a$ : $g(x) \leq f(x) \leq h(x)$ et si $\displaystyle\lim_{x \to a} g(x) = \lim_{x \to a} h(x) = \ell$, alors :</p>
+                        <p>$$\lim_{x \to a} f(x) = \ell$$</p>
+                    </div>
+
+                    <div class="appli" data-correct="2">
+                        <span class="appli-title">Application</span>
+                        <p class="appli-q">Si $\lim_{x \to a} f(x) = 3$ et $\lim_{x \to a} g(x) = 5$, alors $\lim_{x \to a} (f + g)(x)$ vaut :</p>
+                        <div class="appli-choices">
+                            <button class="appli-btn" data-idx="0">$15$</button>
+                            <button class="appli-btn" data-idx="1">$\dfrac{3}{5}$</button>
+                            <button class="appli-btn" data-idx="2">$8$</button>
+                        </div>
+                        <div class="appli-feedback"></div>
+                    </div>
+
+                    <div class="vf" data-correct="vrai">
+                        <p class="vf-q">Vrai ou Faux : le théorème des gendarmes permet de prouver qu'une limite existe en « encadrant » la fonction.</p>
+                        <div class="vf-btns">
+                            <button class="vf-btn" data-choice="vrai">Vrai</button>
+                            <button class="vf-btn" data-choice="faux">Faux</button>
+                        </div>
+                        <div class="vf-feedback"></div>
+                    </div>
+
+                    <div class="secret">
+                        <span class="tag">Le théorème des gendarmes en pratique</span>
+                        <p>Il est <strong>très utile</strong> quand tu as un $\sin$ ou un $\cos$ au numérateur : tu bornes entre $-1$ et $1$, puis tu encadres.</p>
+                    </div>
+
+                    <div class="erreurs">
+                        <span class="tag"></span>
+                        <ul>
+                            <li><strong>Appliquer les règles</strong> sans vérifier que les deux limites existent.</li>
+                            <li><strong>Oublier l'encadrement</strong> dans le théorème des gendarmes.</li>
+                            <li><strong>Croire</strong> que les gendarmes s'appliquent à toute limite : il faut $g \leq f \leq h$.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="scroll-indicator"></div>
+            <div class="page-number">· 04 ·</div>
+        </div>
+
+        <!-- PAGE 5 -->
+        <div class="page" data-page-type="content">
+            <div class="chapter-bar">
+                <div class="chapter-label">
+                    <span class="chapter-num">1.4</span>
+                    <span class="chapter-title">Formes indéterminées</span>
+                </div>
+                <span class="chapter-page">— 05</span>
+            </div>
+            <div class="page-content">
+                <div class="section">
+                    <h2><span class="h2-num">§1.4</span> Formes indéterminées</h2>
+                    <div class="h2-rule"></div>
+
+                    <div class="remarque">
+                        <span class="tag">En clair</span>
+                        <p class="lead">Une forme indéterminée, c'est un calcul où l'on ne peut PAS conclure directement. Il faut <strong>transformer</strong> l'expression pour lever le doute.</p>
+                    </div>
+
+                    <div class="warning">
+                        <span class="tag">Les 4 formes indéterminées à connaître</span>
+                        <table>
+                            <tr>
+                                <th style="width: 40%;">Forme</th>
+                                <th>Stratégie</th>
+                            </tr>
+                            <tr>
+                                <td>$\dfrac{0}{0}$</td>
+                                <td>Factoriser, conjuguer, ou utiliser une limite connue</td>
+                            </tr>
+                            <tr>
+                                <td>$\dfrac{\infty}{\infty}$</td>
+                                <td>Factoriser par le terme dominant</td>
+                            </tr>
+                            <tr>
+                                <td>$\infty - \infty$</td>
+                                <td>Factoriser par le terme dominant</td>
+                            </tr>
+                            <tr>
+                                <td>$0 \times \infty$</td>
+                                <td>Transformer en quotient</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="example">
+                        <span class="tag">Exemple — Forme ∞/∞</span>
+                        <p>Calculer $\displaystyle\lim_{x \to +\infty} \frac{3x^2 + 5x - 1}{2x^2 - x + 4}$.</p>
+                        <p><strong>Forme :</strong> $\dfrac{\infty}{\infty}$. On factorise par $x^2$ :</p>
+                        <p>$$\frac{3 + \frac{5}{x} - \frac{1}{x^2}}{2 - \frac{1}{x} + \frac{4}{x^2}} \xrightarrow{x \to +\infty} \frac{3}{2}$$</p>
+                        <p><strong>Conclusion :</strong> la limite vaut $\dfrac{3}{2}$.</p>
+                    </div>
+
+                    <div class="example">
+                        <span class="tag">Exemple — Forme ∞ − ∞ avec radical</span>
+                        <p>Calculer $\displaystyle\lim_{x \to +\infty} (\sqrt{x^2 + 1} - x)$.</p>
+                        <p><strong>Stratégie :</strong> quantité conjuguée.</p>
+                        <p>$$\sqrt{x^2 + 1} - x = \frac{1}{\sqrt{x^2 + 1} + x} \xrightarrow{x \to +\infty} 0$$</p>
+                    </div>
+
+                    <div class="appli" data-correct="1">
+                        <span class="appli-title">Application</span>
+                        <p class="appli-q">La forme $\dfrac{0}{0}$ est :</p>
+                        <div class="appli-choices">
+                            <button class="appli-btn" data-idx="0">Un résultat égal à 0</button>
+                            <button class="appli-btn" data-idx="1">Une forme indéterminée à lever</button>
+                            <button class="appli-btn" data-idx="2">Un résultat égal à 1</button>
+                        </div>
+                        <div class="appli-feedback"></div>
+                    </div>
+
+                    <div class="secret">
+                        <span class="tag">La règle des degrés en ±∞</span>
+                        <p>Pour les <strong>polynômes en $\pm\infty$</strong> : seul le terme de plus haut degré compte. Pour les <strong>fractions rationnelles</strong> : compare les degrés du numérateur et du dénominateur.</p>
+                    </div>
+
+                    <div class="erreurs">
+                        <span class="tag"></span>
+                        <ul>
+                            <li><strong>Écrire</strong> $\dfrac{0}{0} = 1$ : <strong>faux</strong>, c'est indéterminé.</li>
+                            <li><strong>Écrire</strong> $\infty - \infty = 0$ : <strong>faux</strong> aussi.</li>
+                            <li><strong>Conclure</strong> sans avoir levé l'indétermination.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="scroll-indicator"></div>
+            <div class="page-number">· 05 ·</div>
+        </div>
+
+        <!-- PAGE 6 -->
+        <div class="page" data-page-type="content">
+            <div class="chapter-bar">
+                <div class="chapter-label">
+                    <span class="chapter-num">1.5</span>
+                    <span class="chapter-title">Asymptotes</span>
+                </div>
+                <span class="chapter-page">— 06</span>
+            </div>
+            <div class="page-content">
+                <div class="section">
+                    <h2><span class="h2-num">§1.5</span> Asymptotes</h2>
+                    <div class="h2-rule"></div>
+
+                    <div class="definition">
+                        <span class="tag">Asymptote horizontale</span>
+                        <p>Si $\displaystyle\lim_{x \to \pm\infty} f(x) = \ell$ (fini), la droite d'équation $y = \ell$ est <strong>asymptote horizontale</strong> à la courbe de $f$ en $\pm\infty$.</p>
+                    </div>
+
+                    <div class="definition">
+                        <span class="tag">Asymptote verticale</span>
+                        <p>Si $\displaystyle\lim_{x \to a} f(x) = \pm\infty$ (avec $a$ fini), la droite d'équation $x = a$ est <strong>asymptote verticale</strong> à la courbe.</p>
+                    </div>
+
+                    <div class="definition">
+                        <span class="tag">Asymptote oblique</span>
+                        <p>Si $\displaystyle\lim_{x \to \pm\infty} [f(x) - (ax + b)] = 0$ avec $a \neq 0$, la droite $y = ax + b$ est <strong>asymptote oblique</strong> à la courbe.</p>
+                    </div>
+
+                    <div class="method">
+                        <span class="tag">Trouver une asymptote oblique</span>
+                        <ol>
+                            <li>Calculer $a = \displaystyle\lim_{x \to \pm\infty} \frac{f(x)}{x}$.</li>
+                            <li>Calculer $b = \displaystyle\lim_{x \to \pm\infty} [f(x) - ax]$.</li>
+                            <li>L'asymptote oblique est $y = ax + b$.</li>
+                        </ol>
+                    </div>
+
+                    <div class="graph-box">
+                        <svg viewBox="0 0 400 220" xmlns="http://www.w3.org/2000/svg">
+                            <line x1="200" y1="10" x2="200" y2="210" stroke="#b8a582" stroke-width="1" stroke-dasharray="4,3"/>
+                            <line x1="20" y1="120" x2="390" y2="120" stroke="#b8a582" stroke-width="1" stroke-dasharray="4,3"/>
+                            <path d="M 220 20 Q 240 60, 270 100 Q 300 130, 350 155" stroke="#c65d3b" stroke-width="3" fill="none" stroke-linecap="round"/>
+                            <path d="M 180 20 Q 160 60, 130 100 Q 100 130, 50 155" stroke="#c65d3b" stroke-width="3" fill="none" stroke-linecap="round"/>
+                            <text x="205" y="32" font-size="13" fill="#1e3a5f" font-weight="600" font-style="italic">x = a</text>
+                            <text x="325" y="115" font-size="13" fill="#1e3a5f" font-weight="600" font-style="italic">y = ℓ</text>
+                        </svg>
+                        <div class="graph-caption">Asymptote verticale $x=a$ · Asymptote horizontale $y=\ell$</div>
+                    </div>
+
+                    <div class="appli" data-correct="0">
+                        <span class="appli-title">Application</span>
+                        <p class="appli-q">La fonction $f(x) = \frac{1}{x-2}$ admet une asymptote :</p>
+                        <div class="appli-choices">
+                            <button class="appli-btn" data-idx="0">Verticale $x = 2$</button>
+                            <button class="appli-btn" data-idx="1">Oblique $y = x$</button>
+                            <button class="appli-btn" data-idx="2">Aucune</button>
+                        </div>
+                        <div class="appli-feedback"></div>
+                    </div>
+
+                    <div class="secret">
+                        <span class="tag">Repérer une asymptote verticale</span>
+                        <p>Cherche les valeurs de $x$ qui <strong>annulent le dénominateur</strong>. C'est souvent là que $f$ part à l'infini.</p>
+                    </div>
+
+                    <div class="erreurs">
+                        <span class="tag"></span>
+                        <ul>
+                            <li><strong>Confondre</strong> « valeur interdite » et « asymptote verticale ».</li>
+                            <li><strong>Oublier</strong> de vérifier qu'une limite est finie pour une asymptote horizontale.</li>
+                            <li><strong>Croire</strong> qu'une courbe ne peut avoir qu'une seule asymptote.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="scroll-indicator"></div>
+            <div class="page-number">· 06 ·</div>
+        </div>
+
+        <!-- PAGE 7 -->
+        <div class="page" data-page-type="content">
+            <div class="chapter-bar">
+                <div class="chapter-label">
+                    <span class="chapter-num">1.6</span>
+                    <span class="chapter-title">Fonctions composées</span>
+                </div>
+                <span class="chapter-page">— 07</span>
+            </div>
+            <div class="page-content">
+                <div class="section">
+                    <h2><span class="h2-num">§1.6</span> Limite d'une fonction composée</h2>
+                    <div class="h2-rule"></div>
+
+                    <div class="theorem">
+                        <span class="tag">Théorème</span>
+                        <p>Soient $f$ et $g$ deux fonctions. Si :</p>
+                        <p>$$\lim_{x \to a} f(x) = b \quad \text{et} \quad \lim_{y \to b} g(y) = \ell$$</p>
+                        <p>alors :</p>
+                        <p>$$\lim_{x \to a} g(f(x)) = \ell$$</p>
+                    </div>
+
+                    <div class="property">
+                        <span class="tag">Propriété — Fonction monotone</span>
+                        <p>Si $f$ est <strong>monotone</strong> sur un intervalle ouvert $I$ et si $f$ admet une limite en $a$ (borne de $I$), alors cette limite est unique.</p>
+                        <p>• Si $f$ est croissante et majorée sur $I$, elle admet une limite finie en $a$.</p>
+                        <p>• Si $f$ est croissante et non majorée, sa limite est $+\infty$.</p>
+                    </div>
+
+                    <div class="example">
+                        <span class="tag">Exemple guidé</span>
+                        <p>Calculer $\displaystyle\lim_{x \to +\infty} e^{-x^2}$.</p>
+                        <p><strong>Étape 1 :</strong> on pose $u(x) = -x^2$. Alors $\displaystyle\lim_{x \to +\infty} u(x) = -\infty$.</p>
+                        <p><strong>Étape 2 :</strong> on sait que $\displaystyle\lim_{y \to -\infty} e^y = 0$.</p>
+                        <p><strong>Conclusion :</strong> $\displaystyle\lim_{x \to +\infty} e^{-x^2} = 0$.</p>
+                    </div>
+
+                    <div class="qcm" data-correct="2" data-explanation="On calcule d'abord la limite de la fonction intérieure, puis celle de la fonction extérieure au point obtenu.">
+                        <p class="qcm-q">Pour calculer $\lim_{x \to a} g(f(x))$, on commence par :</p>
+                        <button class="qcm-btn" data-idx="0">Calculer $g(a)$</button>
+                        <button class="qcm-btn" data-idx="1">Dériver $g$</button>
+                        <button class="qcm-btn" data-idx="2">Calculer $\lim_{x \to a} f(x)$</button>
+                        <div class="qcm-feedback"></div>
+                    </div>
+
+                    <div class="secret">
+                        <span class="tag">Calcul « en cascade »</span>
+                        <p>Prends toujours le temps de bien identifier les deux étapes : d'abord la limite de $f$, puis celle de $g$ au point obtenu.</p>
+                    </div>
+
+                    <div class="erreurs">
+                        <span class="tag"></span>
+                        <ul>
+                            <li><strong>Oublier</strong> de vérifier que $f(x)$ reste dans le domaine de $g$.</li>
+                            <li><strong>Inverser l'ordre</strong> : la limite intérieure d'abord.</li>
+                            <li><strong>Mal identifier</strong> les fonctions $f$ et $g$.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="scroll-indicator"></div>
+            <div class="page-number">· 07 ·</div>
+        </div>
+
+        <!-- PAGE 8 -->
+        <div class="page" data-page-type="content">
+            <div class="chapter-bar">
+                <div class="chapter-label">
+                    <span class="chapter-num">2.1</span>
+                    <span class="chapter-title">Continuité en un point</span>
+                </div>
+                <span class="chapter-page">— 08</span>
+            </div>
+            <div class="page-content">
+                <div class="section">
+                    <h2><span class="h2-num">§2.1</span> Continuité en un point</h2>
+                    <div class="h2-rule"></div>
+
+                    <div class="remarque">
+                        <span class="tag">En clair</span>
+                        <p class="lead">Une fonction est continue en un point si l'on peut tracer sa courbe <strong>sans lever le crayon</strong> à cet endroit. Pas de « saut », pas de « trou ».</p>
+                    </div>
+
+                    <div class="definition">
+                        <span class="tag">Définition — Continuité en $a$</span>
+                        <p>Soit $f$ définie sur un intervalle ouvert contenant $a$. On dit que $f$ est <strong>continue en $a$</strong> si :</p>
+                        <p>$$\lim_{x \to a} f(x) = f(a)$$</p>
+                    </div>
+
+                    <div class="definition">
+                        <span class="tag">Continuité à gauche / à droite</span>
+                        <p>• $f$ est <strong>continue à gauche</strong> en $a$ si $\displaystyle\lim_{x \to a^-} f(x) = f(a)$.</p>
+                        <p>• $f$ est <strong>continue à droite</strong> en $a$ si $\displaystyle\lim_{x \to a^+} f(x) = f(a)$.</p>
+                        <p><strong>Théorème :</strong> $f$ est continue en $a$ si et seulement si elle est continue à gauche <em>et</em> à droite en $a$.</p>
+                    </div>
+
+                    <div class="property">
+                        <span class="tag">Dérivable ⇒ Continue</span>
+                        <p>Toute fonction <strong>dérivable</strong> en $a$ est <strong>continue</strong> en $a$.</p>
+                        <p><strong>Attention :</strong> la réciproque est <strong>fausse</strong> ! Exemple : $f(x) = |x|$ est continue en $0$ mais non dérivable en $0$.</p>
+                    </div>
+
+                    <div class="appli" data-correct="1">
+                        <span class="appli-title">Application</span>
+                        <p class="appli-q">La fonction $f(x) = |x|$ est en $0$ :</p>
+                        <div class="appli-choices">
+                            <button class="appli-btn" data-idx="0">Dérivable mais pas continue</button>
+                            <button class="appli-btn" data-idx="1">Continue mais pas dérivable</button>
+                            <button class="appli-btn" data-idx="2">Continue et dérivable</button>
+                        </div>
+                        <div class="appli-feedback"></div>
+                    </div>
+
+                    <div class="vf" data-correct="vrai">
+                        <p class="vf-q">Vrai ou Faux : si $f$ est dérivable en $a$, alors $f$ est continue en $a$.</p>
+                        <div class="vf-btns">
+                            <button class="vf-btn" data-choice="vrai">Vrai</button>
+                            <button class="vf-btn" data-choice="faux">Faux</button>
+                        </div>
+                        <div class="vf-feedback"></div>
+                    </div>
+
+                    <div class="secret">
+                        <span class="tag">Prouver la continuité en un point</span>
+                        <p>Calcule $\displaystyle\lim_{x \to a} f(x)$ et $f(a)$, puis <strong>compare-les</strong>. Si c'est égal, c'est continue.</p>
+                    </div>
+
+                    <div class="erreurs">
+                        <span class="tag"></span>
+                        <ul>
+                            <li><strong>Croire</strong> que « continue » implique « dérivable » : c'est l'inverse qui est vrai.</li>
+                            <li><strong>Oublier</strong> de vérifier la continuité à gauche <em>et</em> à droite pour les fonctions par morceaux.</li>
+                            <li><strong>Conclure</strong> sans avoir calculé $f(a)$ séparément.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="scroll-indicator"></div>
+            <div class="page-number">· 08 ·</div>
+        </div>
+
+        <!-- PAGE 9 -->
+        <div class="page" data-page-type="content">
+            <div class="chapter-bar">
+                <div class="chapter-label">
+                    <span class="chapter-num">2.2</span>
+                    <span class="chapter-title">Continuité sur un intervalle</span>
+                </div>
+                <span class="chapter-page">— 09</span>
+            </div>
+            <div class="page-content">
+                <div class="section">
+                    <h2><span class="h2-num">§2.2</span> Continuité sur un intervalle</h2>
+                    <div class="h2-rule"></div>
+
+                    <div class="definition">
+                        <span class="tag">Définition</span>
+                        <p>$f$ est <strong>continue sur un intervalle $I$</strong> si elle est continue en <strong>tout point</strong> de $I$.</p>
+                    </div>
+
+                    <div class="property">
+                        <span class="tag">Opérations sur les fonctions continues</span>
+                        <p>Si $f$ et $g$ sont continues sur $I$, alors :</p>
+                        <p>• $f + g$, $f \times g$, $k f$ sont continues sur $I$ ;</p>
+                        <p>• $\dfrac{f}{g}$ est continue sur $I$ privé des points où $g$ s'annule ;</p>
+                        <p>• $f \circ g$ est continue (si les domaines sont compatibles).</p>
+                    </div>
+
+                    <div class="property">
+                        <span class="tag">Fonctions de référence</span>
+                        <p>Les <strong>polynômes</strong>, les <strong>fonctions rationnelles</strong>, $\sqrt{x}$, $e^x$, $\ln x$, $\sin x$, $\cos x$ sont <strong>continues sur leur domaine de définition</strong>.</p>
+                    </div>
+
+                    <div class="appli" data-correct="0">
+                        <span class="appli-title">Application</span>
+                        <p class="appli-q">La fonction $f(x) = \frac{1}{x}$ est continue sur :</p>
+                        <div class="appli-choices">
+                            <button class="appli-btn" data-idx="0">$]0\, ; +\infty[$ et $]-\infty\, ; 0[$</button>
+                            <button class="appli-btn" data-idx="1">$\mathbb{R}$</button>
+                            <button class="appli-btn" data-idx="2">$[0\, ; +\infty[$</button>
+                        </div>
+                        <div class="appli-feedback"></div>
+                    </div>
+
+                    <div class="vf" data-correct="faux">
+                        <p class="vf-q">Vrai ou Faux : la fonction $f(x) = \frac{1}{x}$ est continue sur $\mathbb{R}$.</p>
+                        <div class="vf-btns">
+                            <button class="vf-btn" data-choice="vrai">Vrai</button>
+                            <button class="vf-btn" data-choice="faux">Faux</button>
+                        </div>
+                        <div class="vf-feedback"></div>
+                    </div>
+
+                    <div class="secret">
+                        <span class="tag">Justification rapide</span>
+                        <p>Une fonction construite à partir de <strong>fonctions de référence</strong> par opérations et composition est <strong>continue sur son domaine de définition</strong>. C'est souvent la justification la plus rapide.</p>
+                    </div>
+
+                    <div class="erreurs">
+                        <span class="tag"></span>
+                        <ul>
+                            <li><strong>Dire</strong> « $f$ est continue sur $\mathbb{R}$ » alors que le domaine est $\mathbb{R}^*$.</li>
+                            <li><strong>Oublier</strong> que $\ln x$ n'est pas définie en $0$.</li>
+                            <li><strong>Confondre</strong> domaine de définition et domaine de continuité.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="scroll-indicator"></div>
+            <div class="page-number">· 09 ·</div>
+        </div>
+
+        <!-- PAGE 10 -->
+        <div class="page" data-page-type="content">
+            <div class="chapter-bar">
+                <div class="chapter-label">
+                    <span class="chapter-num">2.3</span>
+                    <span class="chapter-title">TVI — Théorème des valeurs intermédiaires</span>
+                </div>
+                <span class="chapter-page">— 10</span>
+            </div>
+            <div class="page-content">
+                <div class="section">
+                    <h2><span class="h2-num">§2.3</span> Théorème des valeurs intermédiaires</h2>
+                    <div class="h2-rule"></div>
+
+                    <div class="remarque">
+                        <span class="tag">En clair</span>
+                        <p class="lead">Si une fonction continue monte d'une valeur à une autre, elle passe forcément par <strong>toutes les valeurs intermédiaires</strong>. Elle ne peut pas « sauter ».</p>
+                    </div>
+
+                    <div class="theorem">
+                        <span class="tag">Théorème des valeurs intermédiaires</span>
+                        <p>Si $f$ est <strong>continue</strong> sur $[a, b]$, alors pour tout réel $k$ compris entre $f(a)$ et $f(b)$, il existe <strong>au moins un réel $c \in [a, b]$</strong> tel que :</p>
+                        <p>$$f(c) = k$$</p>
+                    </div>
+
+                    <div class="property">
+                        <span class="tag">Cas particulier important</span>
+                        <p>Si $f$ est continue sur $[a, b]$ et si $f(a)$ et $f(b)$ sont de <strong>signes contraires</strong>, alors l'équation $f(x) = 0$ admet <strong>au moins une solution</strong> dans $]a, b[$.</p>
+                    </div>
+
+                    <div class="graph-box">
+                        <svg viewBox="0 0 400 220" xmlns="http://www.w3.org/2000/svg">
+                            <line x1="40" y1="10" x2="40" y2="200" stroke="#b8a582" stroke-width="1"/>
+                            <line x1="20" y1="110" x2="380" y2="110" stroke="#b8a582" stroke-width="1"/>
+                            <path d="M 60 180 Q 120 60, 200 100 Q 280 140, 350 40" stroke="#c65d3b" stroke-width="3" fill="none" stroke-linecap="round"/>
+                            <line x1="40" y1="100" x2="380" y2="100" stroke="#c99a2e" stroke-width="1.5" stroke-dasharray="5,3"/>
+                            <circle cx="205" cy="100" r="6" fill="#c65d3b" stroke="#fdfaf3" stroke-width="2"/>
+                            <text x="218" y="95" font-size="14" fill="#c65d3b" font-weight="700" font-style="italic">c</text>
+                            <text x="343" y="95" font-size="13" fill="#c99a2e" font-weight="600" font-style="italic">y = k</text>
+                            <text x="45" y="205" font-size="13" fill="#4a4a4a" font-weight="600">a</text>
+                            <text x="343" y="205" font-size="13" fill="#4a4a4a" font-weight="600">b</text>
+                        </svg>
+                        <div class="graph-caption">La droite $y=k$ coupe la courbe : il existe $c$ tel que $f(c) = k$</div>
+                    </div>
+
+                    <div class="appli" data-correct="1">
+                        <span class="appli-title">Application</span>
+                        <p class="appli-q">Si $f$ est continue sur $[0, 1]$, $f(0) = -2$ et $f(1) = 3$, l'équation $f(x) = 0$ :</p>
+                        <div class="appli-choices">
+                            <button class="appli-btn" data-idx="0">N'a pas de solution</button>
+                            <button class="appli-btn" data-idx="1">Admet au moins une solution</button>
+                            <button class="appli-btn" data-idx="2">Admet une infinité de solutions</button>
+                        </div>
+                        <div class="appli-feedback"></div>
+                    </div>
+
+                    <div class="secret">
+                        <span class="tag">Existence, pas unicité</span>
+                        <p>Le TVI donne <strong>l'existence</strong> d'une solution, mais <strong>PAS l'unicité</strong>. Pour l'unicité, tu dois ajouter un argument de <strong>stricte monotonie</strong>.</p>
+                    </div>
+
+                    <div class="erreurs">
+                        <span class="tag"></span>
+                        <ul>
+                            <li><strong>Appliquer le TVI</strong> sans vérifier que $f$ est continue.</li>
+                            <li><strong>Oublier</strong> de vérifier que $k$ est bien entre $f(a)$ et $f(b)$.</li>
+                            <li><strong>Confondre</strong> existence (TVI) et unicité (corollaire).</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="scroll-indicator"></div>
+            <div class="page-number">· 10 ·</div>
+        </div>
+
+        <!-- PAGE 11 -->
+        <div class="page" data-page-type="content">
+            <div class="chapter-bar">
+                <div class="chapter-label">
+                    <span class="chapter-num">2.4</span>
+                    <span class="chapter-title">Corollaire &amp; bijection</span>
+                </div>
+                <span class="chapter-page">— 11</span>
+            </div>
+            <div class="page-content">
+                <div class="section">
+                    <h2><span class="h2-num">§2.4</span> Corollaire &amp; bijection</h2>
+                    <div class="h2-rule"></div>
+
+                    <div class="theorem">
+                        <span class="tag">Corollaire (Théorème de la bijection)</span>
+                        <p>Si $f$ est <strong>continue et strictement monotone</strong> sur $[a, b]$, alors pour tout $k$ compris entre $f(a)$ et $f(b)$, il existe <strong>un unique</strong> $c \in [a, b]$ tel que :</p>
+                        <p>$$f(c) = k$$</p>
+                    </div>
+
+                    <div class="property">
+                        <span class="tag">Cas particulier fondamental</span>
+                        <p>Si $f$ est <strong>continue et strictement monotone</strong> sur $[a, b]$ et si $f(a)$ et $f(b)$ sont de <strong>signes contraires</strong>, alors l'équation $f(x) = 0$ admet une <strong>unique solution</strong> dans $]a, b[$.</p>
+                    </div>
+
+                    <div class="property">
+                        <span class="tag">Image d'un intervalle</span>
+                        <p>L'image d'un intervalle par une fonction continue est un intervalle.</p>
+                    </div>
+
+                    <div class="method">
+                        <span class="tag">Prouver l'unicité</span>
+                        <ol>
+                            <li>Vérifier que $f$ est continue sur $[a, b]$.</li>
+                            <li>Vérifier que $f(a)$ et $f(b)$ sont de signes contraires.</li>
+                            <li>Démontrer que $f$ est <strong>strictement monotone</strong> (par $f'$).</li>
+                            <li>Appliquer le corollaire → existence et unicité.</li>
+                        </ol>
+                    </div>
+
+                    <div class="qcm" data-correct="0" data-explanation="La stricte monotonie est la condition qui garantit l'unicité (et non seulement l'existence).">
+                        <p class="qcm-q">Quelle condition assure l'<strong>unicité</strong> de la solution dans le TVI ?</p>
+                        <button class="qcm-btn" data-idx="0">La stricte monotonie</button>
+                        <button class="qcm-btn" data-idx="1">La continuité seule</button>
+                        <button class="qcm-btn" data-idx="2">Le signe de $f(a)$</button>
+                        <div class="qcm-feedback"></div>
+                    </div>
+
+                    <div class="secret">
+                        <span class="tag">Rédiger en 3 étapes claires</span>
+                        <p><strong>1)</strong> Continuité · <strong>2)</strong> Signes contraires · <strong>3)</strong> Stricte monotonie. Cela te garantit tous les points, même avec un correcteur sévère.</p>
+                    </div>
+
+                    <div class="erreurs">
+                        <span class="tag"></span>
+                        <ul>
+                            <li><strong>Oublier</strong> de prouver la stricte monotonie.</li>
+                            <li><strong>Confondre</strong> « monotone » et « strictement monotone ».</li>
+                            <li><strong>Ne pas justifier</strong> que $f(a)$ et $f(b)$ ont des signes contraires.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="scroll-indicator"></div>
+            <div class="page-number">· 11 ·</div>
+        </div>
+
+        <!-- PAGE 12 -->
+        <div class="page" data-page-type="content">
+            <div class="chapter-bar">
+                <div class="chapter-label">
+                    <span class="chapter-num">3.1</span>
+                    <span class="chapter-title">Calculer une limite</span>
+                </div>
+                <span class="chapter-page">— 12</span>
+            </div>
+            <div class="page-content">
+                <div class="section">
+                    <span class="badge-niveau">Méthode M1</span>
+                    <h2><span class="h2-num">§3.1</span> Calculer une limite</h2>
+                    <div class="h2-rule"></div>
+
+                    <div class="method">
+                        <span class="tag">Étapes</span>
+                        <ol>
+                            <li>Remplacer $x$ par la valeur cible → identifier la forme.</li>
+                            <li>Si la forme est <strong>indéterminée</strong>, choisir la stratégie :
+                                <ul style="margin-top: 6px;">
+                                    <li>Polynôme → factoriser par le terme dominant.</li>
+                                    <li>Radicaux → quantité conjuguée.</li>
+                                    <li>Trigonométrie → utiliser $\lim_{x \to 0} \frac{\sin x}{x} = 1$.</li>
+                                </ul>
+                            </li>
+                            <li>Simplifier et conclure.</li>
+                        </ol>
+                    </div>
+
+                    <div class="example">
+                        <span class="tag">Exemple 1</span>
+                        <p>Calculer $\displaystyle\lim_{x \to +\infty} \frac{5x^3 - 2x + 1}{2x^3 + x^2 - 4}$.</p>
+                        <p><strong>Forme :</strong> $\dfrac{\infty}{\infty}$. On factorise par $x^3$ :</p>
+                        <p>$$\frac{5 - \frac{2}{x^2} + \frac{1}{x^3}}{2 + \frac{1}{x} - \frac{4}{x^3}} \xrightarrow{x \to +\infty} \frac{5}{2}$$</p>
+                    </div>
+
+                    <div class="example">
+                        <span class="tag">Exemple 2 — Trigonométrie</span>
+                        <p>Calculer $\displaystyle\lim_{x \to 0} \frac{\sin 3x}{x}$.</p>
+                        <p><strong>Astuce :</strong> faire apparaître $\dfrac{\sin 3x}{3x}$.</p>
+                        <p>$$\frac{\sin 3x}{x} = 3 \cdot \frac{\sin 3x}{3x} \xrightarrow{x \to 0} 3 \cdot 1 = 3$$</p>
+                    </div>
+
+                    <div class="appli" data-correct="2">
+                        <span class="appli-title">Application express</span>
+                        <p class="appli-q">Que vaut $\displaystyle\lim_{x \to 0} \frac{\sin 5x}{x}$ ?</p>
+                        <div class="appli-choices">
+                            <button class="appli-btn" data-idx="0">$1$</button>
+                            <button class="appli-btn" data-idx="1">$0$</button>
+                            <button class="appli-btn" data-idx="2">$5$</button>
+                        </div>
+                        <div class="appli-feedback"></div>
+                    </div>
+
+                    <div class="secret">
+                        <span class="tag">Radicaux en ±∞</span>
+                        <p>Pense <strong>systématiquement</strong> à la quantité conjuguée. C'est la technique la plus efficace et la plus rapide.</p>
+                    </div>
+
+                    <div class="erreurs">
+                        <span class="tag"></span>
+                        <ul>
+                            <li><strong>Multiplier par la quantité conjuguée</strong> sans ajuster le numérateur et le dénominateur.</li>
+                            <li><strong>Oublier</strong> le coefficient multiplicateur dans $\frac{\sin(kx)}{x} = k \cdot \frac{\sin(kx)}{kx}$.</li>
+                            <li><strong>Conclure</strong> sans simplifier complètement.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="scroll-indicator"></div>
+            <div class="page-number">· 12 ·</div>
+        </div>
+
+        <!-- PAGE 13 -->
+        <div class="page" data-page-type="content">
+            <div class="chapter-bar">
+                <div class="chapter-label">
+                    <span class="chapter-num">3.2</span>
+                    <span class="chapter-title">Étudier la continuité</span>
+                </div>
+                <span class="chapter-page">— 13</span>
+            </div>
+            <div class="page-content">
+                <div class="section">
+                    <span class="badge-niveau">Méthode M2</span>
+                    <h2><span class="h2-num">§3.2</span> Étudier la continuité en un point</h2>
+                    <div class="h2-rule"></div>
+
+                    <div class="method">
+                        <span class="tag">Étapes</span>
+                        <ol>
+                            <li>Calculer $\displaystyle\lim_{x \to a^-} f(x)$ (limite à gauche).</li>
+                            <li>Calculer $\displaystyle\lim_{x \to a^+} f(x)$ (limite à droite).</li>
+                            <li>Calculer $f(a)$.</li>
+                            <li>Comparer les trois valeurs. Si elles sont égales, $f$ est continue en $a$.</li>
+                        </ol>
+                    </div>
+
+                    <div class="example">
+                        <span class="tag">Exemple guidé</span>
+                        <p>Soit $f(x) = \begin{cases} \dfrac{x^2 - 1}{x - 1} & \text{si } x \neq 1 \\[4pt] 3 & \text{si } x = 1 \end{cases}$. $f$ est-elle continue en $1$ ?</p>
+                        <p><strong>Limite en 1 :</strong> pour $x \neq 1$, $\dfrac{x^2 - 1}{x - 1} = x + 1 \to 2$.</p>
+                        <p><strong>Valeur en 1 :</strong> $f(1) = 3$.</p>
+                        <p><strong>Conclusion :</strong> $\lim_{x \to 1} f(x) = 2 \neq 3 = f(1)$. $f$ <strong>n'est pas continue</strong> en $1$.</p>
+                    </div>
+
+                    <div class="definition">
+                        <span class="tag">Prolongement par continuité</span>
+                        <p>Si $\displaystyle\lim_{x \to a} f(x) = \ell$ existe (finie) mais $f(a) \neq \ell$ (ou $f$ n'est pas définie en $a$), on peut <strong>prolonger</strong> $f$ en $a$ en posant $f(a) = \ell$. La fonction prolongée est alors continue en $a$.</p>
+                    </div>
+
+                    <div class="appli" data-correct="0">
+                        <span class="appli-title">Application</span>
+                        <p class="appli-q">La fonction $f(x) = \frac{\sin x}{x}$ peut être prolongée par continuité en $0$ par :</p>
+                        <div class="appli-choices">
+                            <button class="appli-btn" data-idx="0">$f(0) = 1$</button>
+                            <button class="appli-btn" data-idx="1">$f(0) = 0$</button>
+                            <button class="appli-btn" data-idx="2">$f(0) = +\infty$</button>
+                        </div>
+                        <div class="appli-feedback"></div>
+                    </div>
+
+                    <div class="secret">
+                        <span class="tag">Fonctions par morceaux</span>
+                        <p>La continuité se joue aux <strong>points de jonction</strong>. Il faut toujours vérifier : limite à gauche = limite à droite = valeur au point.</p>
+                    </div>
+
+                    <div class="erreurs">
+                        <span class="tag"></span>
+                        <ul>
+                            <li><strong>Oublier</strong> de calculer la limite à gauche ET à droite.</li>
+                            <li><strong>Confondre</strong> $\lim_{x \to a} f(x)$ et $f(a)$.</li>
+                            <li><strong>Conclure</strong> « non continue » sans justifier.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="scroll-indicator"></div>
+            <div class="page-number">· 13 ·</div>
+        </div>
+
+        <!-- PAGE 14 -->
+        <div class="page" data-page-type="content">
+            <div class="chapter-bar">
+                <div class="chapter-label">
+                    <span class="chapter-num">3.3</span>
+                    <span class="chapter-title">Résoudre f(x) = k</span>
+                </div>
+                <span class="chapter-page">— 14</span>
+            </div>
+            <div class="page-content">
+                <div class="section">
+                    <span class="badge-niveau">Méthode M3</span>
+                    <h2><span class="h2-num">§3.3</span> Résoudre $f(x) = k$ avec le TVI</h2>
+                    <div class="h2-rule"></div>
+
+                    <div class="method">
+                        <span class="tag">Étapes détaillées</span>
+                        <ol>
+                            <li>Justifier la <strong>continuité</strong> de $f$ sur $[a, b]$.</li>
+                            <li>Calculer $f(a)$ et $f(b)$.</li>
+                            <li>Vérifier que $k$ est <strong>entre</strong> $f(a)$ et $f(b)$.</li>
+                            <li>Appliquer le TVI → existence d'au moins une solution.</li>
+                            <li>Pour l'<strong>unicité</strong> : justifier la <strong>stricte monotonie</strong>.</li>
+                        </ol>
+                    </div>
+
+                    <div class="example">
+                        <span class="tag">Exemple complet</span>
+                        <p>Montrer que l'équation $x^3 + x - 1 = 0$ admet une unique solution dans $]0, 1[$.</p>
+                        <p><strong>1 — Continuité :</strong> $f(x) = x^3 + x - 1$ est un polynôme donc continue sur $[0, 1]$.</p>
+                        <p><strong>2 — Signes :</strong> $f(0) = -1 < 0$ et $f(1) = 1 > 0$.</p>
+                        <p><strong>3 — TVI :</strong> $0$ est entre $f(0)$ et $f(1)$, donc il existe $c \in ]0, 1[$ tel que $f(c) = 0$.</p>
+                        <p><strong>4 — Unicité :</strong> $f'(x) = 3x^2 + 1 > 0$ sur $]0, 1[$, donc $f$ est strictement croissante. La solution est unique.</p>
+                    </div>
+
+                    <div class="qcm" data-correct="2" data-explanation="La stricte monotonie se prouve souvent en montrant que la dérivée f'(x) > 0 (ou < 0) sur l'intervalle.">
+                        <p class="qcm-q">Comment prouve-t-on la stricte monotonie d'une fonction dérivable ?</p>
+                        <button class="qcm-btn" data-idx="0">En calculant $\lim_{x \to +\infty} f(x)$</button>
+                        <button class="qcm-btn" data-idx="1">En traçant la courbe</button>
+                        <button class="qcm-btn" data-idx="2">En étudiant le signe de $f'(x)$</button>
+                        <div class="qcm-feedback"></div>
+                    </div>
+
+                    <div class="secret">
+                        <span class="tag">TVI = existence</span>
+                        <p>Le TVI te donne l'<strong>existence</strong>. Pour l'<strong>unicité</strong>, il faut <strong>toujours</strong> ajouter l'argument de <strong>stricte monotonie</strong>. C'est la clé pour obtenir tous les points.</p>
+                    </div>
+
+                    <div class="erreurs">
+                        <span class="tag"></span>
+                        <ul>
+                            <li><strong>Oublier</strong> de justifier la continuité avant d'appliquer le TVI.</li>
+                            <li><strong>Ne pas montrer</strong> que $k$ est bien entre $f(a)$ et $f(b)$.</li>
+                            <li><strong>Oublier</strong> l'argument de stricte monotonie pour l'unicité.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="scroll-indicator"></div>
+            <div class="page-number">· 14 ·</div>
+        </div>
+
+        <!-- PAGE 15 : QUIZ -->
+        <div class="page" data-page-type="content">
+            <div class="chapter-bar">
+                <div class="chapter-label">
+                    <span class="chapter-num">Q</span>
+                    <span class="chapter-title">Quiz récapitulatif</span>
+                </div>
+                <span class="chapter-page">— 15</span>
+            </div>
+            <div class="page-content">
+                <div class="section">
+                    <span class="quiz-title">Auto-évaluation</span>
+                    <h2>Testez vos acquis</h2>
+                    <div class="h2-rule"></div>
+
+                    <div class="qcm" data-correct="2" data-explanation="En +∞, seul le terme de plus haut degré compte : le rapport des coefficients dominants vaut 2/5.">
+                        <p class="qcm-q">1. Que vaut $\displaystyle\lim_{x \to +\infty} \frac{2x^2 - 3x + 1}{5x^2 + x - 2}$ ?</p>
+                        <button class="qcm-btn" data-idx="0">$0$</button>
+                        <button class="qcm-btn" data-idx="1">$1$</button>
+                        <button class="qcm-btn" data-idx="2">$\dfrac{2}{5}$</button>
+                        <div class="qcm-feedback"></div>
+                    </div>
+                    <div class="qcm" data-correct="1" data-explanation="Quand x → 2, le dénominateur tend vers 0 et le numérateur vers 1 : la limite est infinie.">
+                        <p class="qcm-q">2. La fonction $f(x) = \frac{1}{x-2}$ admet une asymptote :</p>
+                        <button class="qcm-btn" data-idx="0">Oblique</button>
+                        <button class="qcm-btn" data-idx="1">Verticale $x = 2$</button>
+                        <button class="qcm-btn" data-idx="2">Aucune</button>
+                        <div class="qcm-feedback"></div>
+                    </div>
+                    <div class="qcm" data-correct="1" data-explanation="Le TVI garantit l'existence d'une solution dès que f est continue et que k est entre f(a) et f(b).">
+                        <p class="qcm-q">3. Si $f$ est continue sur $[0, 1]$, $f(0) = -2$ et $f(1) = 3$, alors $f(x) = 0$ admet :</p>
+                        <button class="qcm-btn" data-idx="0">Aucune solution</button>
+                        <button class="qcm-btn" data-idx="1">Au moins une solution</button>
+                        <button class="qcm-btn" data-idx="2">Une infinité de solutions</button>
+                        <div class="qcm-feedback"></div>
+                    </div>
+                    <div class="qcm" data-correct="0" data-explanation="La dérivabilité implique la continuité, mais la réciproque est fausse.">
+                        <p class="qcm-q">4. Toute fonction dérivable en $a$ est :</p>
+                        <button class="qcm-btn" data-idx="0">Continue en $a$</button>
+                        <button class="qcm-btn" data-idx="1">Monotone en $a$</button>
+                        <button class="qcm-btn" data-idx="2">Paire</button>
+                        <div class="qcm-feedback"></div>
+                    </div>
+                    <div class="qcm" data-correct="2" data-explanation="On factorise par 3x au dénominateur : sin(3x)/x = 3·sin(3x)/(3x) → 3.">
+                        <p class="qcm-q">5. $\displaystyle\lim_{x \to 0} \frac{\sin 3x}{x}$ vaut :</p>
+                        <button class="qcm-btn" data-idx="0">$0$</button>
+                        <button class="qcm-btn" data-idx="1">$1$</button>
+                        <button class="qcm-btn" data-idx="2">$3$</button>
+                        <div class="qcm-feedback"></div>
+                    </div>
+                    <div class="qcm" data-correct="1" data-explanation="Quand on obtient 0/0, on ne peut pas conclure directement.">
+                        <p class="qcm-q">6. La forme $\dfrac{0}{0}$ est :</p>
+                        <button class="qcm-btn" data-idx="0">Égale à 0</button>
+                        <button class="qcm-btn" data-idx="1">Indéterminée</button>
+                        <button class="qcm-btn" data-idx="2">Égale à 1</button>
+                        <div class="qcm-feedback"></div>
+                    </div>
+                    <div class="qcm" data-correct="0" data-explanation="Limite trigonométrique fondamentale.">
+                        <p class="qcm-q">7. $\displaystyle\lim_{x \to 0} \frac{\sin x}{x}$ vaut :</p>
+                        <button class="qcm-btn" data-idx="0">$1$</button>
+                        <button class="qcm-btn" data-idx="1">$0$</button>
+                        <button class="qcm-btn" data-idx="2">$+\infty$</button>
+                        <div class="qcm-feedback"></div>
+                    </div>
+                    <div class="qcm" data-correct="2" data-explanation="L'existence seule est donnée par le TVI, l'unicité exige la stricte monotonie.">
+                        <p class="qcm-q">8. Pour garantir l'<strong>unicité</strong> de la solution de $f(x) = k$, il faut ajouter :</p>
+                        <button class="qcm-btn" data-idx="0">La positivité de $f$</button>
+                        <button class="qcm-btn" data-idx="1">La dérivabilité de $f$</button>
+                        <button class="qcm-btn" data-idx="2">La stricte monotonie de $f$</button>
+                        <div class="qcm-feedback"></div>
+                    </div>
+                    <div class="qcm" data-correct="1" data-explanation="En +∞, e^x l'emporte sur toute puissance de x.">
+                        <p class="qcm-q">9. $\displaystyle\lim_{x \to +\infty} \frac{e^x}{x^3}$ vaut :</p>
+                        <button class="qcm-btn" data-idx="0">$0$</button>
+                        <button class="qcm-btn" data-idx="1">$+\infty$</button>
+                        <button class="qcm-btn" data-idx="2">$1$</button>
+                        <div class="qcm-feedback"></div>
+                    </div>
+                    <div class="qcm" data-correct="0" data-explanation="Pour x ≠ 1, on peut simplifier la fraction en (x+1).">
+                        <p class="qcm-q">10. $\displaystyle\lim_{x \to 1} \frac{x^2 - 1}{x - 1}$ vaut :</p>
+                        <button class="qcm-btn" data-idx="0">$2$</button>
+                        <button class="qcm-btn" data-idx="1">$0$</button>
+                        <button class="qcm-btn" data-idx="2">$1$</button>
+                        <div class="qcm-feedback"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="scroll-indicator"></div>
+            <div class="page-number">· 15 ·</div>
+        </div>
+
+        <!-- PAGE 16 : FLASHCARDS -->
+        <div class="page" data-page-type="content">
+            <div class="chapter-bar">
+                <div class="chapter-label">
+                    <span class="chapter-num">F</span>
+                    <span class="chapter-title">Flashcards</span>
+                </div>
+                <span class="chapter-page">— 16</span>
+            </div>
+            <div class="page-content">
+                <div class="section">
+                    <span class="quiz-title">Mémorisation active</span>
+                    <h2>Cartes à retenir</h2>
+                    <div class="h2-rule"></div>
+                    <p style="font-family: 'Playfair Display', serif; font-style: italic; color: var(--ink-3); margin-bottom: 22px;">Cliquez sur une carte pour la retourner.</p>
+                    <div class="flashcards-grid">
+                        <div class="flashcard"><div class="flashcard-inner"><div class="flashcard-front">$\displaystyle\lim_{x \to +\infty} \frac{1}{x^n}$ ?<span class="flashcard-hint">cliquez</span></div><div class="flashcard-back">$0$</div></div></div>
+                        <div class="flashcard"><div class="flashcard-inner"><div class="flashcard-front">$\displaystyle\lim_{x \to 0} \frac{\sin x}{x}$ ?<span class="flashcard-hint">cliquez</span></div><div class="flashcard-back">$1$</div></div></div>
+                        <div class="flashcard"><div class="flashcard-inner"><div class="flashcard-front">Formes indéterminées ?<span class="flashcard-hint">cliquez</span></div><div class="flashcard-back">0/0 · ∞/∞ · ∞−∞ · 0×∞</div></div></div>
+                        <div class="flashcard"><div class="flashcard-inner"><div class="flashcard-front">Continuité en $a$ ?<span class="flashcard-hint">cliquez</span></div><div class="flashcard-back">$\displaystyle\lim_{x \to a} f(x) = f(a)$</div></div></div>
+                        <div class="flashcard"><div class="flashcard-inner"><div class="flashcard-front">Dérivable ⇒ ?<span class="flashcard-hint">cliquez</span></div><div class="flashcard-back">Continue (mais pas l'inverse)</div></div></div>
+                        <div class="flashcard"><div class="flashcard-inner"><div class="flashcard-front">Asymptote horizontale ?<span class="flashcard-hint">cliquez</span></div><div class="flashcard-back">$\displaystyle\lim_{x \to \pm\infty} f(x) = \ell$</div></div></div>
+                        <div class="flashcard"><div class="flashcard-inner"><div class="flashcard-front">Asymptote verticale ?<span class="flashcard-hint">cliquez</span></div><div class="flashcard-back">$\displaystyle\lim_{x \to a} f(x) = \pm\infty$</div></div></div>
+                        <div class="flashcard"><div class="flashcard-inner"><div class="flashcard-front">TVI — que garantit-il ?<span class="flashcard-hint">cliquez</span></div><div class="flashcard-back">L'existence d'une solution de $f(x) = k$</div></div></div>
+                        <div class="flashcard"><div class="flashcard-inner"><div class="flashcard-front">Pour l'unicité ?<span class="flashcard-hint">cliquez</span></div><div class="flashcard-back">Stricte monotonie + TVI</div></div></div>
+                        <div class="flashcard"><div class="flashcard-inner"><div class="flashcard-front">Croissances comparées ?<span class="flashcard-hint">cliquez</span></div><div class="flashcard-back">$e^x > x^n > \ln x$ en +∞</div></div></div>
+                        <div class="flashcard"><div class="flashcard-inner"><div class="flashcard-front">Astuce ∞/∞ ?<span class="flashcard-hint">cliquez</span></div><div class="flashcard-back">Factoriser par le terme dominant</div></div></div>
+                        <div class="flashcard"><div class="flashcard-inner"><div class="flashcard-front">Astuce ∞−∞ avec radical ?<span class="flashcard-hint">cliquez</span></div><div class="flashcard-back">Quantité conjuguée</div></div></div>
+                    </div>
+                </div>
+            </div>
+            <div class="scroll-indicator"></div>
+            <div class="page-number">· 16 ·</div>
+        </div>
+
+        <!-- PAGE 17 -->
+        <div class="page" data-page-type="content">
+            <div class="chapter-bar">
+                <div class="chapter-label">
+                    <span class="chapter-num">N1</span>
+                    <span class="chapter-title">Exercices standards</span>
+                </div>
+                <span class="chapter-page">— 17</span>
+            </div>
+            <div class="page-content">
+                <div class="section">
+                    <span class="quiz-title">Niveau 1 · Standard</span>
+                    <h2>Exercices 1 à 3</h2>
+                    <div class="h2-rule"></div>
+
+                    <div class="exercise ex-level-1">
+                        <span class="level-badge level-1">Niveau 1</span>
+                        <div class="ex-title">Exercice 1 — Limite d'un polynôme</div>
+                        <div class="ex-body">
+                            <p>Calculer $\displaystyle\lim_{x \to +\infty} (2x^3 - 5x^2 + 1)$ et $\displaystyle\lim_{x \to -\infty} (2x^3 - 5x^2 + 1)$.</p>
+                        </div>
+                        <button class="corr-toggle" data-target="corr1">▸ Voir la correction</button>
+                        <div class="correction" id="corr1">
+                            <div class="step"><span class="step-label">Astuce</span> On factorise par $x^3$ : $x^3 \left(2 - \frac{5}{x} + \frac{1}{x^3}\right)$.</div>
+                            <div class="step"><span class="step-label">En +∞</span> $x^3 \to +\infty$ et la parenthèse $\to 2$. Donc limite = $+\infty$.</div>
+                            <div class="step"><span class="step-label">En −∞</span> $x^3 \to -\infty$ et la parenthèse $\to 2$. Donc limite = $-\infty$.</div>
+                            <div class="step"><span class="step-label">Conclusion</span> $+\infty$ en $+\infty$, $-\infty$ en $-\infty$.</div>
+                        </div>
+                    </div>
+
+                    <div class="exercise ex-level-1">
+                        <span class="level-badge level-1">Niveau 1</span>
+                        <div class="ex-title">Exercice 2 — Limite d'une fraction rationnelle</div>
+                        <div class="ex-body">
+                            <p>Calculer $\displaystyle\lim_{x \to +\infty} \frac{3x^2 + 2x - 1}{x^2 - x + 5}$.</p>
+                        </div>
+                        <button class="corr-toggle" data-target="corr2">▸ Voir la correction</button>
+                        <div class="correction" id="corr2">
+                            <div class="step"><span class="step-label">Forme</span> $\infty / \infty$.</div>
+                            <div class="step"><span class="step-label">Stratégie</span> Factoriser numérateur et dénominateur par $x^2$.</div>
+                            <div class="step"><span class="step-label">Calcul</span> $\dfrac{3 + \frac{2}{x} - \frac{1}{x^2}}{1 - \frac{1}{x} + \frac{5}{x^2}}$.</div>
+                            <div class="step"><span class="step-label">Limite</span> Numérateur $\to 3$, dénominateur $\to 1$.</div>
+                            <div class="step"><span class="step-label">Conclusion</span> $\lim = 3$.</div>
+                        </div>
+                    </div>
+
+                    <div class="exercise ex-level-1">
+                        <span class="level-badge level-1">Niveau 1</span>
+                        <div class="ex-title">Exercice 3 — Simplification et limite</div>
+                        <div class="ex-body">
+                            <p>Calculer $\displaystyle\lim_{x \to 2} \frac{x^2 - 4}{x - 2}$.</p>
+                        </div>
+                        <button class="corr-toggle" data-target="corr3">▸ Voir la correction</button>
+                        <div class="correction" id="corr3">
+                            <div class="step"><span class="step-label">Forme</span> $\dfrac{0}{0}$ : indéterminée.</div>
+                            <div class="step"><span class="step-label">Factorisation</span> $x^2 - 4 = (x-2)(x+2)$.</div>
+                            <div class="step"><span class="step-label">Simplification</span> Pour $x \neq 2$ : $x + 2$.</div>
+                            <div class="step"><span class="step-label">Limite</span> $x + 2 \to 4$ quand $x \to 2$.</div>
+                            <div class="step"><span class="step-label">Conclusion</span> $\lim = 4$.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="scroll-indicator"></div>
+            <div class="page-number">· 17 ·</div>
+        </div>
+
+        <!-- PAGE 18 -->
+        <div class="page" data-page-type="content">
+            <div class="chapter-bar">
+                <div class="chapter-label">
+                    <span class="chapter-num">N2</span>
+                    <span class="chapter-title">Exercices intermédiaires</span>
+                </div>
+                <span class="chapter-page">— 18</span>
+            </div>
+            <div class="page-content">
+                <div class="section">
+                    <span class="quiz-title">Niveau 2 · Intermédiaire</span>
+                    <h2>Exercices 4 à 6</h2>
+                    <div class="h2-rule"></div>
+
+                    <div class="exercise ex-level-2">
+                        <span class="level-badge level-2">Niveau 2</span>
+                        <div class="ex-title">Exercice 4 — Limite avec radicaux</div>
+                        <div class="ex-body">
+                            <p>Calculer $\displaystyle\lim_{x \to +\infty} (\sqrt{x^2 + 3x} - x)$.</p>
+                        </div>
+                        <button class="corr-toggle" data-target="corr4">▸ Voir la correction</button>
+                        <div class="correction" id="corr4">
+                            <div class="step"><span class="step-label">Forme</span> $\infty - \infty$.</div>
+                            <div class="step"><span class="step-label">Stratégie</span> Quantité conjuguée.</div>
+                            <div class="step"><span class="step-label">Calcul</span> $\sqrt{x^2 + 3x} - x = \dfrac{3x}{\sqrt{x^2 + 3x} + x}$.</div>
+                            <div class="step"><span class="step-label">En +∞</span> Factoriser par $x$ : $x\left(\sqrt{1 + \frac{3}{x}} + 1\right)$.</div>
+                            <div class="step"><span class="step-label">Limite</span> La fraction $\to \dfrac{3x}{2x} = \dfrac{3}{2}$.</div>
+                            <div class="step"><span class="step-label">Conclusion</span> $\lim = \dfrac{3}{2}$.</div>
+                        </div>
+                    </div>
+
+                    <div class="exercise ex-level-2">
+                        <span class="level-badge level-2">Niveau 2</span>
+                        <div class="ex-title">Exercice 5 — Limite trigonométrique</div>
+                        <div class="ex-body">
+                            <p>Calculer $\displaystyle\lim_{x \to 0} \frac{\sin 5x}{\sin 2x}$.</p>
+                        </div>
+                        <button class="corr-toggle" data-target="corr5">▸ Voir la correction</button>
+                        <div class="correction" id="corr5">
+                            <div class="step"><span class="step-label">Forme</span> $\dfrac{0}{0}$.</div>
+                            <div class="step"><span class="step-label">Astuce</span> Multiplier et diviser par $5x$ et $2x$.</div>
+                            <div class="step"><span class="step-label">Calcul</span> $\dfrac{\sin 5x}{5x} \cdot \dfrac{2x}{\sin 2x} \cdot \dfrac{5x}{2x}$.</div>
+                            <div class="step"><span class="step-label">Limites</span> $\dfrac{\sin 5x}{5x} \to 1$ et $\dfrac{2x}{\sin 2x} \to 1$.</div>
+                            <div class="step"><span class="step-label">Conclusion</span> $\lim = \dfrac{5}{2}$.</div>
+                        </div>
+                    </div>
+
+                    <div class="exercise ex-level-2">
+                        <span class="level-badge level-2">Niveau 2</span>
+                        <div class="ex-title">Exercice 6 — Continuité en un point</div>
+                        <div class="ex-body">
+                            <p>Soit $f(x) = \begin{cases} \dfrac{x^2 - 4}{x - 2} & \text{si } x \neq 2 \\[4pt] k & \text{si } x = 2 \end{cases}$.</p>
+                            <p>Déterminer $k$ pour que $f$ soit continue en $2$.</p>
+                        </div>
+                        <button class="corr-toggle" data-target="corr6">▸ Voir la correction</button>
+                        <div class="correction" id="corr6">
+                            <div class="step"><span class="step-label">Limite</span> Pour $x \neq 2$ : $\dfrac{x^2-4}{x-2} = x+2 \to 4$.</div>
+                            <div class="step"><span class="step-label">Condition</span> Continuité ssi $\lim_{x \to 2} f(x) = f(2) = k$.</div>
+                            <div class="step"><span class="step-label">Conclusion</span> Donc $k = 4$.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="scroll-indicator"></div>
+            <div class="page-number">· 18 ·</div>
+        </div>
+
+        <!-- PAGE 19 -->
+        <div class="page" data-page-type="content">
+            <div class="chapter-bar">
+                <div class="chapter-label">
+                    <span class="chapter-num">N3</span>
+                    <span class="chapter-title">Exercices avancés</span>
+                </div>
+                <span class="chapter-page">— 19</span>
+            </div>
+            <div class="page-content">
+                <div class="section">
+                    <span class="quiz-title">Niveau 3 · Avancé</span>
+                    <h2>Exercices 7 à 9</h2>
+                    <div class="h2-rule"></div>
+
+                    <div class="exercise ex-level-3">
+                        <span class="level-badge level-3">Niveau 3</span>
+                        <div class="ex-title">Exercice 7 — Étude complète d'asymptotes</div>
+                        <div class="ex-body">
+                            <p>Soit $f(x) = \dfrac{x^2 + 1}{x - 1}$. Déterminer les asymptotes à la courbe de $f$.</p>
+                        </div>
+                        <button class="corr-toggle" data-target="corr7">▸ Voir la correction</button>
+                        <div class="correction" id="corr7">
+                            <div class="step"><span class="step-label">Verticale</span> Le dénominateur s'annule en $x = 1$. $\lim_{x \to 1} f(x) = \pm\infty$ : asymptote $x = 1$.</div>
+                            <div class="step"><span class="step-label">Oblique — a</span> $a = \lim_{x \to \pm\infty} \dfrac{f(x)}{x} = \lim \dfrac{x^2 + 1}{x(x-1)} = 1$.</div>
+                            <div class="step"><span class="step-label">Oblique — b</span> $b = \lim (f(x) - x) = \lim \dfrac{x + 1}{x-1} = 1$.</div>
+                            <div class="step"><span class="step-label">Conclusion</span> Asymptotes : $x = 1$ (verticale) et $y = x + 1$ (oblique).</div>
+                        </div>
+                    </div>
+
+                    <div class="exercise ex-level-3">
+                        <span class="level-badge level-3">Niveau 3</span>
+                        <div class="ex-title">Exercice 8 — Fonction composée</div>
+                        <div class="ex-body">
+                            <p>Calculer $\displaystyle\lim_{x \to +\infty} \ln\!\left(\frac{x}{x+1}\right)$.</p>
+                        </div>
+                        <button class="corr-toggle" data-target="corr8">▸ Voir la correction</button>
+                        <div class="correction" id="corr8">
+                            <div class="step"><span class="step-label">Étape 1</span> $\dfrac{x}{x+1} = \dfrac{1}{1 + \frac{1}{x}} \to 1$ quand $x \to +\infty$.</div>
+                            <div class="step"><span class="step-label">Étape 2</span> $\ln y \to \ln 1 = 0$ quand $y \to 1$.</div>
+                            <div class="step"><span class="step-label">Conclusion</span> $\lim_{x \to +\infty} \ln\!\left(\frac{x}{x+1}\right) = 0$.</div>
+                        </div>
+                    </div>
+
+                    <div class="exercise ex-level-3">
+                        <span class="level-badge level-3">Niveau 3</span>
+                        <div class="ex-title">Exercice 9 — TVI et existence</div>
+                        <div class="ex-body">
+                            <p>Montrer que l'équation $x^3 + 2x - 5 = 0$ admet une unique solution dans $]1, 2[$.</p>
+                        </div>
+                        <button class="corr-toggle" data-target="corr9">▸ Voir la correction</button>
+                        <div class="correction" id="corr9">
+                            <div class="step"><span class="step-label">Continuité</span> $f(x) = x^3 + 2x - 5$ est un polynôme, donc continue sur $[1, 2]$.</div>
+                            <div class="step"><span class="step-label">Signes</span> $f(1) = -2 < 0$ ; $f(2) = 7 > 0$.</div>
+                            <div class="step"><span class="step-label">TVI</span> Il existe $c \in ]1, 2[$ tel que $f(c) = 0$.</div>
+                            <div class="step"><span class="step-label">Unicité</span> $f'(x) = 3x^2 + 2 > 0$ sur $]1, 2[$ : $f$ strictement croissante.</div>
+                            <div class="step"><span class="step-label">Conclusion</span> La solution est unique dans $]1, 2[$.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="scroll-indicator"></div>
+            <div class="page-number">· 19 ·</div>
+        </div>
+
+        <!-- PAGE 20 -->
+        <div class="page" data-page-type="content">
+            <div class="chapter-bar">
+                <div class="chapter-label">
+                    <span class="chapter-num">N4</span>
+                    <span class="chapter-title">Exercices experts</span>
+                </div>
+                <span class="chapter-page">— 20</span>
+            </div>
+            <div class="page-content">
+                <div class="section">
+                    <span class="quiz-title">Niveau 4 · Expert</span>
+                    <h2>Exercices 10 à 12</h2>
+                    <div class="h2-rule"></div>
+
+                    <div class="exercise ex-level-4">
+                        <span class="level-badge level-4">Niveau 4</span>
+                        <div class="ex-title">Exercice 10 — Croissances comparées</div>
+                        <div class="ex-body">
+                            <p>Calculer $\displaystyle\lim_{x \to +\infty} \frac{e^x - x^2}{x^3}$.</p>
+                        </div>
+                        <button class="corr-toggle" data-target="corr10">▸ Voir la correction</button>
+                        <div class="correction" id="corr10">
+                            <div class="step"><span class="step-label">Forme</span> $\dfrac{\infty}{\infty}$.</div>
+                            <div class="step"><span class="step-label">Astuce</span> Diviser numérateur et dénominateur par $e^x$.</div>
+                            <div class="step"><span class="step-label">Calcul</span> $\dfrac{1 - \frac{x^2}{e^x}}{\frac{x^3}{e^x}}$.</div>
+                            <div class="step"><span class="step-label">Croissance</span> $\dfrac{x^2}{e^x} \to 0$ et $\dfrac{x^3}{e^x} \to 0$.</div>
+                            <div class="step"><span class="step-label">Conclusion</span> Le numérateur $\to 1$, le dénominateur $\to 0^+$ : limite = $+\infty$.</div>
+                        </div>
+                    </div>
+
+                    <div class="exercise ex-level-4">
+                        <span class="level-badge level-4">Niveau 4</span>
+                        <div class="ex-title">Exercice 11 — Fonction par morceaux</div>
+                        <div class="ex-body">
+                            <p>Soit $f(x) = \begin{cases} x^2 + 2x & \text{si } x \leq 1 \\ 3x - k & \text{si } x > 1 \end{cases}$.</p>
+                            <p>Déterminer $k$ pour que $f$ soit continue en $1$.</p>
+                        </div>
+                        <button class="corr-toggle" data-target="corr11">▸ Voir la correction</button>
+                        <div class="correction" id="corr11">
+                            <div class="step"><span class="step-label">Limite à gauche</span> $f(1^-) = 1 + 2 = 3$.</div>
+                            <div class="step"><span class="step-label">Limite à droite</span> $f(1^+) = 3 - k$.</div>
+                            <div class="step"><span class="step-label">Valeur</span> $f(1) = 3$.</div>
+                            <div class="step"><span class="step-label">Continuité</span> Il faut $3 - k = 3$, donc $k = 0$.</div>
+                            <div class="step"><span class="step-label">Conclusion</span> $f$ continue en $1$ ssi $k = 0$.</div>
+                        </div>
+                    </div>
+
+                    <div class="exercise ex-level-4">
+                        <span class="level-badge level-4">Niveau 4</span>
+                        <div class="ex-title">Exercice 12 — TVI avec fonction non monotone</div>
+                        <div class="ex-body">
+                            <p>Montrer que l'équation $\cos x = x$ admet une unique solution dans $]0, 1[$.</p>
+                        </div>
+                        <button class="corr-toggle" data-target="corr12">▸ Voir la correction</button>
+                        <div class="correction" id="corr12">
+                            <div class="step"><span class="step-label">Fonction</span> Poser $f(x) = \cos x - x$.</div>
+                            <div class="step"><span class="step-label">Continuité</span> $f$ continue sur $[0, 1]$.</div>
+                            <div class="step"><span class="step-label">Signes</span> $f(0) = 1 > 0$ et $f(1) \approx -0{,}46 < 0$.</div>
+                            <div class="step"><span class="step-label">TVI</span> Il existe $c \in ]0, 1[$ tel que $f(c) = 0$.</div>
+                            <div class="step"><span class="step-label">Unicité</span> $f'(x) = -\sin x - 1 < 0$ sur $]0, 1[$ : $f$ strictement décroissante. Solution unique.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="scroll-indicator"></div>
+            <div class="page-number">· 20 ·</div>
+        </div>
+
+        <!-- PAGE 21 : SUJETS D'EXAMEN -->
+        <div class="page" data-page-type="content">
+            <div class="chapter-bar">
+                <div class="chapter-label">
+                    <span class="chapter-num">EX</span>
+                    <span class="chapter-title">Sujets type examen</span>
+                </div>
+                <span class="chapter-page">— 21</span>
+            </div>
+            <div class="page-content">
+                <div class="section">
+                    <span class="quiz-title">Format examen</span>
+                    <h2>Exercices 13 à 15</h2>
+                    <div class="h2-rule"></div>
+
+                    <div class="bac-exercise">
+                        <div class="bac-header">
+                            <span class="level-badge level-5">Examen</span>
+                            <span class="bac-title">Exercice 13 — Fonction rationnelle</span>
+                        </div>
+                        <div class="bac-context">
+                            Soit $f$ définie sur $\mathbb{R} \setminus \{2\}$ par $f(x) = \dfrac{x^2 - 3x + 3}{x - 2}$.
+                        </div>
+                        <div class="bac-question" data-num="1.">Déterminer les limites de $f$ aux bornes de son domaine.</div>
+                        <div class="bac-question" data-num="2.">En déduire les asymptotes à la courbe de $f$.</div>
+                        <div class="bac-question" data-num="3.">Montrer que $f(x) = x - 1 + \dfrac{1}{x - 2}$.</div>
+                        <div class="bac-question" data-num="4.">Étudier le signe de $f(x)$ sur $]2\, ; +\infty[$.</div>
+                        <button class="corr-toggle" data-target="corr13">▸ Voir la correction</button>
+                        <div class="correction" id="corr13">
+                            <div class="step"><span class="step-label">Q1</span> En $x \to 2$ : $\pm\infty$. En $\pm\infty$ : $f(x) \sim x \to \pm\infty$.</div>
+                            <div class="step"><span class="step-label">Q2</span> Asymptote verticale $x = 2$ et oblique $y = x - 1$.</div>
+                            <div class="step"><span class="step-label">Q3</span> $x^2 - 3x + 3 = (x - 1)(x - 2) + 1$. Donc $f(x) = x - 1 + \frac{1}{x-2}$.</div>
+                            <div class="step"><span class="step-label">Q4</span> Sur $]2, +\infty[$ : $x - 1 > 0$ et $\frac{1}{x-2} > 0$, donc $f(x) > 0$.</div>
+                        </div>
+                    </div>
+
+                    <div class="bac-exercise">
+                        <div class="bac-header">
+                            <span class="level-badge level-5">Examen</span>
+                            <span class="bac-title">Exercice 14 — TVI et bijection</span>
+                        </div>
+                        <div class="bac-context">
+                            Soit $f(x) = x^3 - 3x + 1$.
+                        </div>
+                        <div class="bac-question" data-num="1.">Étudier les variations de $f$ sur $[-2, 2]$.</div>
+                        <div class="bac-question" data-num="2.">Montrer que $f(x) = 0$ admet une solution dans $]0, 1[$.</div>
+                        <div class="bac-question" data-num="3.">Montrer que cette solution est unique sur $]0, 1[$.</div>
+                        <div class="bac-question" data-num="4.">Donner une valeur approchée à $10^{-2}$ près.</div>
+                        <button class="corr-toggle" data-target="corr14">▸ Voir la correction</button>
+                        <div class="correction" id="corr14">
+                            <div class="step"><span class="step-label">Q1</span> $f'(x) = 3(x-1)(x+1)$. $f$ croissante sur $[-2,-1]$, décroissante sur $[-1,1]$, croissante sur $[1,2]$.</div>
+                            <div class="step"><span class="step-label">Q2</span> $f(0) = 1 > 0$ et $f(1) = -1 < 0$. TVI.</div>
+                            <div class="step"><span class="step-label">Q3</span> $f'(x) < 0$ sur $]0, 1[$ : $f$ strictement décroissante.</div>
+                            <div class="step"><span class="step-label">Q4</span> $f(0{,}3) \approx 0{,}127$, $f(0{,}4) \approx -0{,}136$ : $0{,}3 < c < 0{,}4$.</div>
+                        </div>
+                    </div>
+
+                    <div class="bac-exercise">
+                        <div class="bac-header">
+                            <span class="level-badge level-5">Examen</span>
+                            <span class="bac-title">Exercice 15 — Problème complet</span>
+                        </div>
+                        <div class="bac-context">
+                            Soit $g(x) = \dfrac{x}{\sqrt{x^2 + 1}}$.
+                        </div>
+                        <div class="bac-question" data-num="1.">Déterminer le domaine de définition de $g$.</div>
+                        <div class="bac-question" data-num="2.">Calculer $\displaystyle\lim_{x \to +\infty} g(x)$ et $\displaystyle\lim_{x \to -\infty} g(x)$.</div>
+                        <div class="bac-question" data-num="3.">En déduire les asymptotes à la courbe de $g$.</div>
+                        <div class="bac-question" data-num="4.">Montrer que $g$ est strictement croissante sur $\mathbb{R}$.</div>
+                        <button class="corr-toggle" data-target="corr15">▸ Voir la correction</button>
+                        <div class="correction" id="corr15">
+                            <div class="step"><span class="step-label">Q1</span> $x^2 + 1 > 0$ toujours, donc $g$ définie sur $\mathbb{R}$.</div>
+                            <div class="step"><span class="step-label">Q2 — +∞</span> $g(x) = \dfrac{x}{x\sqrt{1 + \frac{1}{x^2}}} \to 1$.</div>
+                            <div class="step"><span class="step-label">Q2 — −∞</span> De même : $g(x) \to -1$.</div>
+                            <div class="step"><span class="step-label">Q3</span> Asymptotes horizontales $y = 1$ et $y = -1$.</div>
+                            <div class="step"><span class="step-label">Q4</span> $g'(x) = \dfrac{1}{(x^2 + 1)^{3/2}} > 0$, donc $g$ strictement croissante.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="scroll-indicator"></div>
+            <div class="page-number">· 21 ·</div>
+        </div>
+
+        <!-- PAGE 22 : BILAN -->
+        <div class="page" data-page-type="content">
+            <div class="chapter-bar">
+                <div class="chapter-label">
+                    <span class="chapter-num">★</span>
+                    <span class="chapter-title">Bilan de la formation</span>
+                </div>
+                <span class="chapter-page">— 22</span>
+            </div>
+            <div class="page-content">
+                <div class="section">
+                    <span class="quiz-title">Bilan général</span>
+                    <h2>Objectifs &amp; révision</h2>
+                    <div class="h2-rule"></div>
+
+                    <div class="score-banner">
+                        <div class="score-item">Applications <span class="score-val" id="scoreAppli">0</span> / <span id="totalAppli">0</span></div>
+                        <div class="score-item">QCM <span class="score-val" id="scoreQcm">0</span> / <span id="totalQcm">0</span></div>
+                        <div class="score-item">Vrai/Faux <span class="score-val" id="scoreVf">0</span> / <span id="totalVf">0</span></div>
+                    </div>
+
+                    <div class="definition">
+                        <span class="tag">Objectifs atteints</span>
+                        <ul>
+                            <li>Identifier les formes indéterminées</li>
+                            <li>Déterminer des limites de polynômes et fractions rationnelles</li>
+                            <li>Utiliser les limites de référence et les croissances comparées</li>
+                            <li>Déterminer les asymptotes d'une courbe</li>
+                            <li>Calculer la limite d'une fonction composée</li>
+                            <li>Étudier la continuité en un point et sur un intervalle</li>
+                            <li>Appliquer le TVI et son corollaire</li>
+                            <li>Prouver l'existence et l'unicité d'une solution de $f(x) = k$</li>
+                        </ul>
+                    </div>
+
+                    <div class="secret">
+                        <span class="tag">Les 3 règles à retenir</span>
+                        <p><strong>1.</strong> Toujours commencer par remplacer $x$ par la valeur cible.</p>
+                        <p><strong>2.</strong> Forme indéterminée : factoriser, conjuguer ou utiliser les limites de référence.</p>
+                        <p><strong>3.</strong> TVI = existence. Ajouter la stricte monotonie pour l'unicité.</p>
+                    </div>
+
+                    <div class="erreurs">
+                        <span class="tag"></span>
+                        <ul>
+                            <li>Écrire $\dfrac{0}{0} = 1$ ou $\infty - \infty = 0$.</li>
+                            <li>Oublier de vérifier la continuité à gauche <em>et</em> à droite.</li>
+                            <li>Confondre <strong>continuité</strong> et <strong>dérivabilité</strong>.</li>
+                            <li>Appliquer le TVI sans vérifier que $k$ est bien entre $f(a)$ et $f(b)$.</li>
+                            <li>Oublier de justifier la <strong>stricte monotonie</strong> pour l'unicité.</li>
+                        </ul>
+                    </div>
+
+                    <div class="formula gold">
+                        <span class="label">Citation</span>
+                        <p style="font-family: 'Playfair Display', serif; font-style: italic; font-size: 1.15rem;">« La limite, c'est l'art de dire vers quoi l'on tend, sans jamais y arriver. »</p>
+                    </div>
+                </div>
+            </div>
+            <div class="scroll-indicator"></div>
+            <div class="page-number">· 22 ·</div>
+        </div>
+
+        <!-- PAGE 23 : FIN -->
+        <div class="page" data-page-type="back">
+            <div class="back-content">
+                <div class="fin">Fin</div>
+                <div class="divider"></div>
+                <p>Vous avez parcouru</p>
+                <p><strong>Limites &amp; Continuité</strong></p>
+                <div class="divider"></div>
+                <p style="font-family: 'Inter', sans-serif; font-size: 0.78rem; letter-spacing: 0.24em; text-transform: uppercase; color: var(--ink-3); font-weight: 600;">Terminale D · Analyse</p>
+                <p style="font-size: 0.95rem; margin-top: 26px; color: var(--ink-3); font-style: italic; font-family: 'Playfair Display', serif;">Revenez réviser régulièrement</p>
+            </div>
+            <div class="page-number">· 23 ·</div>
+        </div>
+
+    </div>
+
+    <!-- NAVIGATION -->
+    <div class="book-nav">
+        <button class="nav-btn" id="prevBtn" aria-label="Page précédente">
+            <span class="arrow">←</span><span class="label">Précédent</span>
+        </button>
+
+        <div class="page-selector">
+            <span class="label-nav">Page</span>
+            <input type="number" class="page-input" id="pageInput" min="0" max="23" value="0" inputmode="numeric" aria-label="Numéro de page">
+            <span class="page-total">/ <span id="totPage">23</span></span>
+            <button class="go-btn" id="goBtn" aria-label="Aller à la page">OK</button>
+        </div>
+
+        <button class="nav-btn" id="nextBtn" aria-label="Page suivante">
+            <span class="label">Suivant</span><span class="arrow">→</span>
+        </button>
+    </div>
+</div>
+
+<script>
+(function() {
+    'use strict';
+
+    const pages = Array.from(document.querySelectorAll('.page'));
+    const total = pages.length;
+    let current = 0;
+    let animating = false;
+    const ANIM_DURATION = 400;
+
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const progressBar = document.getElementById('progressBar');
+    const loader = document.getElementById('loader');
+    const pageInput = document.getElementById('pageInput');
+    const goBtn = document.getElementById('goBtn');
+    const totPageEl = document.getElementById('totPage');
+
+    totPageEl.textContent = total - 1;
+    pageInput.max = total - 1;
+
+    let scoreAppli = 0, scoreQcm = 0, scoreVf = 0;
+
+    const totalAppliEl = document.getElementById('totalAppli');
+    const totalQcmEl = document.getElementById('totalQcm');
+    const totalVfEl = document.getElementById('totalVf');
+    if (totalAppliEl) totalAppliEl.textContent = document.querySelectorAll('.appli').length;
+    if (totalQcmEl) totalQcmEl.textContent = document.querySelectorAll('.qcm').length;
+    if (totalVfEl) totalVfEl.textContent = document.querySelectorAll('.vf').length;
+
+    function clearAnimClasses(el) {
+        el.classList.remove('anim-in-right', 'anim-out-left', 'anim-in-left', 'anim-out-right');
+    }
+
+    function updateUI() {
+        pageInput.value = current;
+        prevBtn.disabled = (current === 0);
+        nextBtn.disabled = (current === total - 1);
+        progressBar.style.width = ((current / (total - 1)) * 100) + '%';
+    }
+
+    function checkScroll(pageEl) {
+        const c = pageEl.querySelector('.page-content');
+        if (!c) return;
+        const hasScroll = c.scrollHeight > c.clientHeight + 4;
+        pageEl.classList.toggle('has-scroll', hasScroll);
+        const atBottom = c.scrollTop + c.clientHeight >= c.scrollHeight - 4;
+        pageEl.classList.toggle('scrolled-bottom', atBottom);
+    }
+
+    function attachScrollListener(pageEl) {
+        const c = pageEl.querySelector('.page-content');
+        if (!c || c.dataset.scrollListener === '1') return;
+        c.dataset.scrollListener = '1';
+        c.addEventListener('scroll', () => {
+            const atBottom = c.scrollTop + c.clientHeight >= c.scrollHeight - 4;
+            pageEl.classList.toggle('scrolled-bottom', atBottom);
+        }, { passive: true });
+    }
+
+    function ensureVisible(el) {
+        if (!el) return;
+        const c = el.closest('.page-content');
+        if (!c) return;
+        requestAnimationFrame(() => {
+            const cr = c.getBoundingClientRect();
+            const er = el.getBoundingClientRect();
+            if (er.bottom > cr.bottom - 16) {
+                const delta = er.bottom - cr.bottom + 40;
+                c.scrollTo({ top: c.scrollTop + delta, behavior: 'smooth' });
+            }
+        });
+    }
+
+    function goTo(target) {
+        if (animating) return;
+        target = parseInt(target, 10);
+        if (isNaN(target) || target < 0 || target >= total || target === current) return;
+
+        animating = true;
+        const forward = target > current;
+        const oldPage = pages[current];
+        const newPage = pages[target];
+
+        clearAnimClasses(oldPage);
+        clearAnimClasses(newPage);
+
+        const newScroll = newPage.querySelector('.page-content');
+        if (newScroll) newScroll.scrollTop = 0;
+
+        newPage.classList.add('active');
+        if (forward) {
+            newPage.classList.add('anim-in-right');
+            oldPage.classList.add('anim-out-left');
+        } else {
+            newPage.classList.add('anim-in-left');
+            oldPage.classList.add('anim-out-right');
+        }
+
+        window.setTimeout(() => {
+            clearAnimClasses(oldPage);
+            clearAnimClasses(newPage);
+            oldPage.classList.remove('active');
+
+            current = target;
+            updateUI();
+
+            requestAnimationFrame(() => {
+                checkScroll(newPage);
+                attachScrollListener(newPage);
+            });
+
+            animating = false;
+        }, ANIM_DURATION);
+    }
+
+    function next() { if (current < total - 1) goTo(current + 1); }
+    function prev() { if (current > 0) goTo(current - 1); }
+
+    prevBtn.addEventListener('click', prev);
+    nextBtn.addEventListener('click', next);
+
+    function jumpToInput() {
+        const raw = pageInput.value.trim();
+        if (raw === '') return;
+        const n = parseInt(raw, 10);
+        if (isNaN(n) || n < 0 || n >= total) {
+            pageInput.value = current;
+            return;
+        }
+        if (n === current) { pageInput.blur(); return; }
+        goTo(n);
+        pageInput.blur();
+    }
+
+    goBtn.addEventListener('click', jumpToInput);
+
+    pageInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); jumpToInput(); }
+        else if (e.key === 'Escape') { pageInput.value = current; pageInput.blur(); }
+    });
+
+    pageInput.addEventListener('focus', () => pageInput.select());
+
+    document.addEventListener('keydown', (e) => {
+        if (document.activeElement === pageInput) return;
+        if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); next(); }
+        else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prev(); }
+        else if (e.key === 'Home') { e.preventDefault(); goTo(0); }
+        else if (e.key === 'End') { e.preventDefault(); goTo(total - 1); }
+    });
+
+    document.querySelectorAll('.toc-list li[data-goto]').forEach(li => {
+        li.addEventListener('click', () => {
+            const target = parseInt(li.getAttribute('data-goto'), 10);
+            goTo(target);
+        });
+    });
+
+    document.querySelectorAll('.appli').forEach(q => {
+        const correct = parseInt(q.dataset.correct, 10);
+        const btns = q.querySelectorAll('.appli-btn');
+        const fb = q.querySelector('.appli-feedback');
+        btns.forEach(b => {
+            b.addEventListener('click', () => {
+                if (q.dataset.answered === '1') return;
+                q.dataset.answered = '1';
+                const idx = parseInt(b.dataset.idx, 10);
+                btns.forEach(x => x.disabled = true);
+                if (idx === correct) {
+                    b.classList.add('correct');
+                    fb.textContent = 'Bonne réponse.';
+                    fb.classList.add('show');
+                    scoreAppli++;
+                    const el = document.getElementById('scoreAppli');
+                    if (el) { el.textContent = scoreAppli; el.classList.add('good'); }
+                } else {
+                    b.classList.add('wrong');
+                    btns[correct].classList.add('correct');
+                    fb.textContent = 'La bonne réponse est en vert.';
+                    fb.classList.add('show', 'bad');
+                    const el = document.getElementById('scoreAppli');
+                    if (el) el.classList.add('bad');
+                }
+                ensureVisible(fb);
+                const pageEl = q.closest('.page');
+                if (pageEl) setTimeout(() => checkScroll(pageEl), 300);
+            });
+        });
+    });
+
+    document.querySelectorAll('.qcm').forEach(q => {
+        const correct = parseInt(q.dataset.correct, 10);
+        const explanation = q.dataset.explanation || '';
+        const btns = q.querySelectorAll('.qcm-btn');
+        const fb = q.querySelector('.qcm-feedback');
+        btns.forEach(b => {
+            b.addEventListener('click', () => {
+                if (q.dataset.answered === '1') return;
+                q.dataset.answered = '1';
+                const idx = parseInt(b.dataset.idx, 10);
+                btns.forEach(x => x.disabled = true);
+                if (idx === correct) {
+                    b.classList.add('correct');
+                    fb.className = 'qcm-feedback good';
+                    fb.textContent = 'Bonne réponse ! ' + explanation;
+                    scoreQcm++;
+                    const el = document.getElementById('scoreQcm');
+                    if (el) { el.textContent = scoreQcm; el.classList.add('good'); }
+                } else {
+                    b.classList.add('wrong');
+                    btns[correct].classList.add('correct');
+                    fb.className = 'qcm-feedback bad';
+                    fb.textContent = explanation;
+                    const el = document.getElementById('scoreQcm');
+                    if (el) el.classList.add('bad');
+                }
+                if (window.MathJax && window.MathJax.typesetPromise) {
+                    window.MathJax.typesetPromise([fb]).then(() => ensureVisible(fb)).catch(() => {});
+                } else { ensureVisible(fb); }
+                const pageEl = q.closest('.page');
+                if (pageEl) setTimeout(() => checkScroll(pageEl), 350);
+            });
+        });
+    });
+
+    document.querySelectorAll('.flashcard').forEach(c => {
+        c.addEventListener('click', () => c.classList.toggle('flipped'));
+    });
+
+    document.querySelectorAll('.vf').forEach(v => {
+        const correct = v.dataset.correct;
+        const btns = v.querySelectorAll('.vf-btn');
+        const fb = v.querySelector('.vf-feedback');
+        btns.forEach(b => {
+            b.addEventListener('click', () => {
+                if (v.dataset.answered === '1') return;
+                v.dataset.answered = '1';
+                const choice = b.dataset.choice;
+                btns.forEach(x => x.disabled = true);
+                if (choice === correct) {
+                    b.classList.add('correct');
+                    fb.className = 'vf-feedback good';
+                    fb.textContent = 'Correct.';
+                    scoreVf++;
+                    const el = document.getElementById('scoreVf');
+                    if (el) { el.textContent = scoreVf; el.classList.add('good'); }
+                } else {
+                    b.classList.add('wrong');
+                    btns.forEach(x => { if (x.dataset.choice === correct) x.classList.add('correct'); });
+                    fb.className = 'vf-feedback bad';
+                    fb.textContent = 'La bonne réponse était : ' + correct.toUpperCase();
+                    const el = document.getElementById('scoreVf');
+                    if (el) el.classList.add('bad');
+                }
+                ensureVisible(fb);
+                const pageEl = v.closest('.page');
+                if (pageEl) setTimeout(() => checkScroll(pageEl), 300);
+            });
+        });
+    });
+
+    document.querySelectorAll('.corr-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const target = document.getElementById(btn.dataset.target);
+            if (!target) return;
+            const open = target.classList.toggle('open');
+            btn.textContent = open ? '▾ Masquer la correction' : '▸ Voir la correction';
+            if (open) {
+                if (window.MathJax && window.MathJax.typesetPromise) {
+                    window.MathJax.typesetPromise([target])
+                        .then(() => setTimeout(() => ensureVisible(target), 100))
+                        .catch(() => {});
+                } else {
+                    setTimeout(() => ensureVisible(target), 100);
+                }
+                setTimeout(() => { const p = btn.closest('.page'); if (p) checkScroll(p); }, 550);
+            } else {
+                setTimeout(() => { const p = btn.closest('.page'); if (p) checkScroll(p); }, 350);
+            }
+        });
+    });
+
+    const book = document.getElementById('book');
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchStartTime = 0;
+    let touchActive = false;
+    let touchDirection = null;
+
+    book.addEventListener('touchstart', (e) => {
+        if (animating) return;
+        if (e.touches.length !== 1) return;
+        const t = e.touches[0];
+        touchStartX = t.clientX;
+        touchStartY = t.clientY;
+        touchStartTime = Date.now();
+        touchActive = true;
+        touchDirection = null;
+    }, { passive: true });
+
+    book.addEventListener('touchmove', (e) => {
+        if (!touchActive) return;
+        if (e.touches.length !== 1) return;
+        const t = e.touches[0];
+        const dx = t.clientX - touchStartX;
+        const dy = t.clientY - touchStartY;
+        const adx = Math.abs(dx);
+        const ady = Math.abs(dy);
+        if (touchDirection === null) {
+            if (adx < 12 && ady < 12) return;
+            touchDirection = (adx > ady * 1.5) ? 'h' : 'v';
+        }
+    }, { passive: true });
+
+    book.addEventListener('touchend', (e) => {
+        if (!touchActive) { return; }
+        touchActive = false;
+        if (touchDirection !== 'h') return;
+        const t = e.changedTouches[0];
+        const dx = t.clientX - touchStartX;
+        const dy = t.clientY - touchStartY;
+        const dt = Date.now() - touchStartTime;
+        const adx = Math.abs(dx);
+        const ady = Math.abs(dy);
+        const isFast = dt < 400 && adx > 40;
+        const isFar = adx > 60;
+        const goodDirection = adx > ady * 1.5;
+        if ((isFast || isFar) && goodDirection) {
+            if (dx < 0) next();
+            else prev();
+        }
+    }, { passive: true });
+
+    book.addEventListener('touchcancel', () => {
+        touchActive = false;
+        touchDirection = null;
+    }, { passive: true });
+
+    pages[0].classList.add('active');
+    updateUI();
+    pages.forEach(p => attachScrollListener(p));
+
+    function ready() {
+        if (window.MathJax && window.MathJax.typesetPromise) {
+            window.MathJax.typesetPromise().then(() => {
+                pages.forEach(p => checkScroll(p));
+                setTimeout(() => pages.forEach(p => checkScroll(p)), 300);
+                if (loader) {
+                    loader.classList.add('hidden');
+                    setTimeout(() => {
+                        if (loader && loader.parentNode) loader.parentNode.removeChild(loader);
+                    }, 500);
+                }
+            }).catch(() => {
+                if (loader) loader.classList.add('hidden');
+            });
+        } else {
+            setTimeout(ready, 80);
+        }
+    }
+
+    window.addEventListener('load', ready);
+
+    setTimeout(() => {
+        if (loader && !loader.classList.contains('hidden')) {
+            if (window.MathJax && window.MathJax.typesetPromise) {
+                window.MathJax.typesetPromise().catch(() => {}).then(() => {
+                    pages.forEach(p => checkScroll(p));
+                    loader.classList.add('hidden');
+                });
+            } else {
+                loader.classList.add('hidden');
+            }
+        }
+    }, 4000);
+
+    window.addEventListener('resize', () => {
+        pages.forEach(p => checkScroll(p));
+    });
+
+})();
+</script>
+
+</body>
+</html>
